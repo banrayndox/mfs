@@ -12,6 +12,7 @@ export default defineConfig({
         name: 'Upay powered by AI',
         short_name: 'Upay AI',
         description: 'Bilingual AI-Powered Mobile Financial Services for Bangladesh',
+        id: '/',
         start_url: '/',
         scope: '/',
         theme_color: '#FFD400',
@@ -47,6 +48,10 @@ export default defineConfig({
           },
         ],
       },
+      devOptions: {
+        enabled: true,
+        type: 'module',
+      },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         navigateFallback: '/index.html',
@@ -55,6 +60,7 @@ export default defineConfig({
     }),
   ],
   server: {
+    host: true,
     port: 5173,
     proxy: {
       '/api': {
@@ -66,5 +72,9 @@ export default defineConfig({
         ws: true,
       },
     },
+  },
+  preview: {
+    host: true,
+    port: 4173,
   },
 });
