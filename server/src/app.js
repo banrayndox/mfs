@@ -17,6 +17,9 @@ import { safetyRouter } from './routes/safety.routes.js';
 
 export const app = express();
 
+// Trust proxy for reverse proxy platforms (e.g. Vercel, Nginx)
+app.set('trust proxy', 1);
+
 // Security Headers
 app.use(
   helmet({
@@ -29,7 +32,18 @@ app.use(
 const clientOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 app.use(
   cors({
-    origin: [clientOrigin, 'http://localhost:5173', 'http://127.0.0.1:5173'],
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (
+        origin === clientOrigin ||
+        origin.endsWith('.vercel.app') ||
+        origin.includes('localhost') ||
+        origin.includes('127.0.0.1')
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
     credentials: true,
   })
 );

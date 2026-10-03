@@ -37,3 +37,6 @@ Thumbs.db
 # Local cache & temporary files
 .vite/
 .eslintcache
+
+.vercel
+.env*
