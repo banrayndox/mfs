@@ -51,9 +51,9 @@
 
 ## Overview
 
-**FinMate AI** (developed as Guardian MFS) is a next-generation mobile financial service (MFS) progressive web application (PWA). It transforms traditional menu-heavy USSD/app interfaces into an intelligent, conversational financial operating layer.
+**UPAY powered by ai** is a next-generation mobile financial service (MFS) progressive web application (PWA). It transforms traditional menu-heavy USSD/app interfaces into an intelligent, conversational financial operating layer.
 
-Traditional MFS platforms force users to navigate deep, fragmented menus for basic tasks, offer no contextual spending intelligence, lack automated savings mechanisms, and fail to protect vulnerable users (such as children and elderly relatives) from scams and coerced transactions. FinMate AI solves this with a **unified AI Financial Copilot** that acts as the conversational operating system for the entire application.
+Traditional MFS platforms force users to navigate deep, fragmented menus for basic tasks, offer no contextual spending intelligence, lack automated savings mechanisms, and fail to protect vulnerable users (such as children and elderly relatives) from scams and coerced transactions. UPAY powered by ai solves this with a **unified AI Financial Copilot** that acts as the conversational operating system for the entire application.
 
 The manual UI and the AI assistant share the **exact same backend service layer**. Money never moves based on unverified AI text. Natural language intents trigger deterministic service functions, and all mutations require an explicit two-phase confirmation card protected by PIN step-up authentication and canonical action hashing.
 
@@ -71,7 +71,7 @@ The manual UI and the AI assistant share the **exact same backend service layer*
 
 ## Solution
 
-FinMate AI introduces an **AI Financial Operating Layer** built on five pillars:
+UPAY powered by ai introduces an **AI Financial Operating Layer** built on five pillars:
 
 1. **Unified AI Financial Copilot**: One conversational interface that understands Bangla and English (including colloquial and transliterated phrasing) to check balances, analyze spending, configure savings, and navigate the app.
 2. **Deterministic Financial Math (Zero Hallucination)**: Balances, category aggregations, month-over-month comparisons, and habit evaluations are computed strictly by database aggregation queries and deterministic service algorithms in pure integer poisha.
@@ -177,7 +177,7 @@ User financial context and rules are persisted in MongoDB via the `FinancialMemo
 
 ## Architecture
 
-FinMate AI follows a strict **Single Service Layer** architecture:
+UPAY powered by ai follows a strict **Single Service Layer** architecture:
 
 ```
 [ User Manual UI (React PWA) ]       [ AI Financial Copilot ]
@@ -272,7 +272,7 @@ Implemented in `server/src/services/rag.service.js`:
 
 ## Realtime Architecture
 
-FinMate AI uses Socket.IO (`server/src/services/socket.service.js` and `client/src/hooks/useSocket.js`) for instant UI synchronization:
+UPAY powered by ai uses Socket.IO (`server/src/services/socket.service.js` and `client/src/hooks/useSocket.js`) for instant UI synchronization:
 
 - **Handshake Authentication**: Sockets authenticate via JWT access tokens during the handshake. Unauthenticated connections are rejected.
 - **Room Isolation**: Every socket joins a private room: `user:<userId>`.
