@@ -9,7 +9,8 @@
 ![MongoDB](https://img.shields.io/badge/MongoDB-7%2B-47A248?logo=mongodb&logoColor=white)
 ![Socket.IO](https://img.shields.io/badge/Socket.IO-Realtime-010101?logo=socket.io&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)
-![Tests](https://img.shields.io/badge/Vitest-87%20tests-6E9F18?logo=vitest&logoColor=white)
+![Tests](https://img.shields.io/badge/Vitest-118%20tests-6E9F18?logo=vitest&logoColor=white)
+![PWA](https://img.shields.io/badge/PWA-Installable-10B981?logo=pwa&logoColor=white)
 ![Status](https://img.shields.io/badge/Status-Synthetic%20Prototype-orange)
 
 *Single Service Layer ("Two Doors, One Brain") · Append-Only Double-Entry Ledger · Deterministic Financial Math · In-Band Guardian Risk Analysis · Automated Micro-Savings · Self-Contained RAG · Realtime Socket.IO*
@@ -464,7 +465,7 @@ Runs at `http://localhost:5173`.
 
 ## Testing
 
-The project includes 12 Vitest suites (87 tests) covering financial integrity, concurrency, guardian flows, realtime sockets, and AI operating layer logic:
+The project includes 13 Vitest suites (118 tests) covering financial integrity, concurrency, guardian flows, realtime sockets, and AI operating layer logic:
 
 ```bash
 # Run all tests

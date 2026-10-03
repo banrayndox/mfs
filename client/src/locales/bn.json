@@ -1,0 +1,123 @@
+{
+  "brand": {
+    "name": "Upay powered by AI",
+    "tagline": "নিরাপদ এআই-চালিত মোবাইল আর্থিক সেবা"
+  },
+  "nav": {
+    "home": "হোম",
+    "account": "অ্যাকাউন্ট",
+    "aiAssistant": "এআই এজেন্ট",
+    "history": "লেনদেন",
+    "more": "আরও"
+  },
+  "header": {
+    "balance": "ব্যালেন্স",
+    "tapForBalance": "ব্যালেন্স দেখতে ট্যাপ করুন",
+    "hideBalance": "ব্যালেন্স লুকান",
+    "mockMode": "এআই: মক মোড",
+    "liveMode": "এআই: লাইভ",
+    "notifications": "বিজ্ঞপ্তি"
+  },
+  "home": {
+    "greeting": "শুভ দিন",
+    "servicesTitle": "আর্থিক সেবাসমূহ",
+    "safetyTitle": "নতুন ফিচারসমূহ",
+    "remindersTitle": "স্মার্ট রিমাইন্ডার ও বকেয়া বিল",
+    "viewAll": "সব দেখুন",
+    "noReminders": "আপাতত কোনো বকেয়া বিল বা রিমাইন্ডার নেই।"
+  },
+  "services": {
+    "sendMoney": "সেন্ড মানি",
+    "mobileRecharge": "মোবাইল রিচার্জ",
+    "cashOut": "ক্যাশ আউট",
+    "payBill": "পে বিল",
+    "addMoney": "অ্যাড মানি",
+    "savings": "সঞ্চয়",
+    "fundTransfer": "ফান্ড ট্রান্সফার",
+    "requestMoney": "অনুরোধ মানি",
+    "makePayment": "পেমেন্ট করুন"
+  },
+  "safety": {
+    "guardianMode": "অভিভাবক মোড",
+    "checkMessage": "বার্তা পরীক্ষা",
+    "reminders": "রিমাইন্ডার",
+    "aiAssistant": "এআই সহকারী",
+    "scheduledRules": "শিডিউল ও রুলস",
+    "groupBill": "গ্রুপ বিল"
+  },
+  "account": {
+    "title": "অ্যাকাউন্ট ও ওয়ালেট",
+    "primaryWallet": "প্রধান ওয়ালেট",
+    "savingsWallet": "সঞ্চয়ী ওয়ালেট",
+    "limitsAndUsage": "সীমা ও ব্যবহার",
+    "serviceCharges": "সার্ভিস চার্জ",
+    "linkedAccounts": "সংযুক্ত অ্যাকাউন্ট",
+    "daily": "দৈনিক",
+    "monthly": "মাসিক"
+  },
+  "history": {
+    "title": "লেনদেনের ইতিহাস",
+    "filterAll": "সকল",
+    "filterIn": "আগত",
+    "filterOut": "প্রেরিত",
+    "empty": "কোনো লেনদেন পাওয়া যায়নি।"
+  },
+  "more": {
+    "title": "আরও অপশন",
+    "settings": "সেটিংস",
+    "changePin": "পিন পরিবর্তন",
+    "language": "ভাষা",
+    "theme": "থিম",
+    "biometrics": "বায়োমেট্রিক নিরাপত্তা",
+    "support": "২৪/৭ সাপোর্ট ও প্রশ্নোত্তর",
+    "about": "প্রোটোটাইপ পরিচিতি",
+    "disclaimer": "হ্যাকাথন প্রোটোটাইপ: সমস্ত অর্থ সিমুলেটেড। কোনো বাস্তব লেনদেন হয় না। শুধুমাত্র ডেমো ডেটা ব্যবহৃত।"
+  },
+  "common": {
+    "bdt": "টাকা",
+    "poisha": "পয়সা",
+    "confirm": "নিশ্চিত করুন",
+    "cancel": "বাতিল",
+    "back": "ফিরে যান",
+    "loading": "লোড হচ্ছে...",
+    "error": "একটি ত্রুটি ঘটেছে",
+    "success": "সফল হয়েছে",
+    "close": "বন্ধ করুন"
+  },
+  "guardian": {
+    "parentGuardian": "অভিভাবক",
+    "notLinked": "সংযুক্ত নেই",
+    "protectionEnabled": "অভিভাবক সুরক্ষা সক্রিয়"
+  },
+  "groupBillModal": {
+    "title": "গ্রুপ বিল স্প্লিট",
+    "subtitle": "বন্ধুদের সাথে শেয়ার করুন বা পাওনা টাকার রিকোয়েস্ট পাঠান",
+    "singleRequest": "একক রিকোয়েস্ট",
+    "groupSplit": "গ্রুপ স্প্লিট",
+    "pendingRequests": "পেন্ডিং রিকোয়েস্ট",
+    "wherePaymentGoes": "কোথায় টাকা যাবে?",
+    "destMerchant": "দোকান / মার্চেন্ট",
+    "destAgent": "এজেন্ট",
+    "destPerson": "ব্যক্তি / সেন্ড মানি",
+    "destNumber": "পেমেন্ট গন্তব্য নম্বর",
+    "totalAmount": "সর্বমোট পরিমাণ (টাকা)",
+    "description": "বিবরণ / কারণ",
+    "descPlaceholder": "যেমন: রেস্তোরাঁ ডিনার, ফ্ল্যাট ভাড়া, পিকনিক",
+    "membersTitle": "গ্রুপ সদস্যবৃন্দ",
+    "memberLabel": "সদস্য",
+    "addMore": "+ আরো সদস্য যোগ করুন",
+    "splitMethod": "স্প্লিট পদ্ধতি",
+    "equalSplit": "সমান ভাগ (Equal)",
+    "percentageSplit": "শতাংশ (Percentage)",
+    "fixedSplit": "নির্দিষ্ট পরিমাণ (Fixed)",
+    "previewTitle": "পরিশোধের হিসেব পূর্বরূপ",
+    "paymentDestination": "টাকা জমা হবে",
+    "createButton": "গ্রুপ বিল তৈরি করুন",
+    "validAccount": "নিবন্ধিত অ্যাকাউন্ট",
+    "invalidNumber": "অবৈধ মোবাইল নম্বর",
+    "accountNotFound": "অ্যাকাউন্ট পাওয়া যায়নি",
+    "checking": "যাচাই হচ্ছে...",
+    "sumMismatchFixed": "সদস্যদের পরিমাণের যোগফল মোট বিলের সমান হতে হবে",
+    "sumMismatchPercent": "শতকরা হারের যোগফল ১০০% হতে হবে"
+  }
+}

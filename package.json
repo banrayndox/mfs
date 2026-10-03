@@ -1,0 +1,31 @@
+{
+  "name": "guardian-mfs",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "setup": "node server/scripts/setup.js",
+    "dev": "concurrently -k -p \"[{name}]\" -n \"SERVER,CLIENT\" -c \"blue.bold,yellow.bold\" \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "npm run dev --workspace=server",
+    "dev:client": "npm run dev --workspace=client",
+    "doctor": "node server/scripts/doctor.js",
+    "seed": "node server/scripts/seed.js",
+    "train:risk": "node server/scripts/train-risk.js",
+    "eval:risk": "node server/scripts/eval-risk.js",
+    "eval:agent": "node server/scripts/eval-agent.js",
+    "test": "vitest run -c server/vitest.config.js",
+    "lint": "eslint client/src server/src server/scripts",
+    "format": "prettier --check \"{client,server}/**/*.{js,jsx,json,css,md}\"",
+    "build": "npm run build --workspace=client"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "eslint": "^9.21.0",
+    "prettier": "^3.5.3",
+    "puppeteer-core": "^25.12.0"
+  }
+}

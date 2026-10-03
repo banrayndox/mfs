@@ -1,0 +1,123 @@
+{
+  "brand": {
+    "name": "Upay powered by AI",
+    "tagline": "Safe AI-Powered Mobile Financial Services"
+  },
+  "nav": {
+    "home": "Home",
+    "account": "Account",
+    "aiAssistant": "AI Agent",
+    "history": "History",
+    "more": "More"
+  },
+  "header": {
+    "balance": "Balance",
+    "tapForBalance": "Tap for Balance",
+    "hideBalance": "Hide Balance",
+    "mockMode": "AI: mock mode",
+    "liveMode": "AI: live",
+    "notifications": "Notifications"
+  },
+  "home": {
+    "greeting": "Hello",
+    "servicesTitle": "Financial Services",
+    "safetyTitle": "New Features",
+    "remindersTitle": "Smart Reminders & Due Bills",
+    "viewAll": "View all",
+    "noReminders": "No pending bills or reminders right now."
+  },
+  "services": {
+    "sendMoney": "Send Money",
+    "mobileRecharge": "Mobile Recharge",
+    "cashOut": "Cash Out",
+    "payBill": "Pay Bill",
+    "addMoney": "Add Money",
+    "savings": "Savings",
+    "fundTransfer": "Fund Transfer",
+    "requestMoney": "Request Money",
+    "makePayment": "Make Payment"
+  },
+  "safety": {
+    "guardianMode": "Guardian Mode",
+    "checkMessage": "Check Message",
+    "reminders": "Reminders",
+    "aiAssistant": "AI Copilot",
+    "scheduledRules": "Scheduled & Rules",
+    "groupBill": "Group Bill"
+  },
+  "account": {
+    "title": "Account & Wallets",
+    "primaryWallet": "Primary Wallet",
+    "savingsWallet": "Savings Wallet",
+    "limitsAndUsage": "Limits & Usage",
+    "serviceCharges": "Service Charges",
+    "linkedAccounts": "Linked Accounts",
+    "daily": "Daily",
+    "monthly": "Monthly"
+  },
+  "history": {
+    "title": "Transaction History",
+    "filterAll": "All",
+    "filterIn": "In",
+    "filterOut": "Out",
+    "empty": "No transactions found."
+  },
+  "more": {
+    "title": "More Options",
+    "settings": "Settings",
+    "changePin": "Change PIN",
+    "language": "Language",
+    "theme": "Theme",
+    "biometrics": "Biometric Authentication",
+    "support": "24/7 Support & FAQ",
+    "about": "About Prototype",
+    "disclaimer": "Hackathon Prototype: All money is simulated. No real financial transactions occur. Synthetic data only."
+  },
+  "common": {
+    "bdt": "BDT",
+    "poisha": "Poisha",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "back": "Back",
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "success": "Success",
+    "close": "Close"
+  },
+  "guardian": {
+    "parentGuardian": "Parent / Guardian",
+    "notLinked": "Not linked",
+    "protectionEnabled": "Guardian Protection Enabled"
+  },
+  "groupBillModal": {
+    "title": "Group Bill Split",
+    "subtitle": "Split expenses with friends or send money requests",
+    "singleRequest": "Single Request",
+    "groupSplit": "Group Split",
+    "pendingRequests": "Pending Requests",
+    "wherePaymentGoes": "Where will the payment go?",
+    "destMerchant": "Merchant / Shop",
+    "destAgent": "Agent",
+    "destPerson": "Person / Send Money",
+    "destNumber": "Destination Number",
+    "totalAmount": "Total Amount (BDT)",
+    "description": "Description / Note",
+    "descPlaceholder": "e.g. Dinner, Flat rent, Tour",
+    "membersTitle": "Group Members",
+    "memberLabel": "Member",
+    "addMore": "+ Add More",
+    "splitMethod": "Split Method",
+    "equalSplit": "Equal",
+    "percentageSplit": "Percentage",
+    "fixedSplit": "Fixed Amount",
+    "previewTitle": "Contribution Breakdown",
+    "paymentDestination": "Payment goes to",
+    "createButton": "Create Group Bill",
+    "validAccount": "Registered Account",
+    "invalidNumber": "Invalid mobile number",
+    "accountNotFound": "Account not registered",
+    "checking": "Checking...",
+    "sumMismatchFixed": "Sum of fixed amounts must equal total bill amount",
+    "sumMismatchPercent": "Sum of percentages must equal 100%"
+  }
+}

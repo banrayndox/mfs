@@ -1,0 +1,74 @@
+[
+  {
+    "id": "kb-send-vs-cashout",
+    "category": "services",
+    "titleBn": "সেন্ড মানি এবং ক্যাশ আউটের মধ্যে পার্থক্য",
+    "titleEn": "Difference between Send Money and Cash Out",
+    "keywords": ["send money", "cash out", "difference", "সেন্ড মানি", "ক্যাশ আউট", "পার্থক্য"],
+    "contentBn": "সেন্ড মানি হলো একজন গ্রাহকের ওয়ালেট থেকে অন্য একজন গ্রাহকের ওয়ালেটে সরাসরি ডিজিটাল টাকা স্থানান্তর। ১,০০০ টাকার নিচে কোনো চার্জ নেই, ১,০০০ টাকার ওপরে ৫ টাকা ফ্ল্যাট ফি। আর ক্যাশ আউট হলো আপনার ওয়ালেটের ডিজিটাল ব্যালেন্স কোনো অনুমোদিত এজেন্ট পয়েন্টে গিয়ে নগদ টাকায় রূপান্তর (উত্তোলন) করা। ক্যাশ আউটে নির্ধারিত ১.৫% (হাজারে ১৫ টাকা) সার্ভিস চার্জ প্রযোজ্য হয়।",
+    "contentEn": "Send Money is a peer-to-peer digital transfer directly from one customer wallet to another customer wallet. It is free for amounts up to ৳1,000, and incurs a flat ৳5 fee above ৳1,000. Cash Out is the withdrawal of your digital balance into physical cash at an authorized agent point. Cash Out incurs a standard 1.5% fee (৳15 per ৳1,000)."
+  },
+  {
+    "id": "kb-fee-schedule",
+    "category": "fees",
+    "titleBn": "সার্ভিস ফি ও চার্জের তালিকা",
+    "titleEn": "Service Fee Schedule",
+    "keywords": ["fee", "charge", "cost", "ফি", "চার্জ", "খরচ", "টাকা কাটে"],
+    "contentBn": "উপায় পাওয়ার্ড বাই এআই-এর সার্ভিস ফি নিম্নরূপ:\n• সেন্ড মানি (Send Money): ৳১,০০০ পর্যন্ত সম্পূর্ণ ফ্রি (৳০), ৳১,০০০-এর বেশি হলে ৫ টাকা ফ্ল্যাট ফি।\n• ক্যাশ আউট (Cash Out): অনুমোদিত এজেন্ট পয়েন্টে ১.৫% (প্রতি হাজারে ১৫ টাকা)।\n• মোবাইল রিচার্জ (Mobile Recharge): কোনো বাড়তি চার্জ নেই (১০০% ফ্রি)।\n• ইউটিলিটি বিল পে (Bill Pay): বিদ্যুৎ, পানি, গ্যাস ও ইন্টারনেট বিলে কোনো ফি নেই (ফ্রি)।\n• টাকা যোগ (Add Money): ব্যাংক বা কার্ড থেকে ওয়ালেটে টাকা যোগ সম্পূর্ণ ফ্রি।",
+    "contentEn": "Service fee policy for Upay powered by AI:\n• Send Money: Free (৳0) for transfers up to ৳1,000; flat ৳5 fee for transfers over ৳1,000.\n• Cash Out: 1.5% fee at authorized agent locations (৳15 per ৳1,000).\n• Mobile Recharge: 100% free with zero fees.\n• Utility Bill Pay: Free for electricity (DPDC/DESCO), water (WASA), gas (Titas), and internet.\n• Add Money: Free transfer from linked banks and cards."
+  },
+  {
+    "id": "kb-micro-savings",
+    "category": "savings",
+    "titleBn": "মাইক্রো-সেভিংস পদ্ধতি (পার্সেন্টেজ, রাউন্ড-আপ ও গোল-ভিত্তিক সঞ্চয়)",
+    "titleEn": "Micro-Savings Methods (Percentage, Round-up & Goal-based)",
+    "keywords": ["savings", "roundup", "percentage", "micro-savings", "সঞ্চয়", "রাউন্ড আপ", "পার্সেন্টেজ", "সেভিংস"],
+    "contentBn": "মাইক্রো-সেভিংস চারটি পদ্ধতিতে কাজ করে:\n১. পার্সেন্টেজ সেভিংস (Percentage Saving): প্রতিটি লেনদেন থেকে নির্দিষ্ট শতাংশ (যেমন ২% বা ৫%) স্বয়ংক্রিয়ভাবে সঞ্চয় তহবিলে জমা হয়। যেমন ৳৫০০ খরচ করলে ৳১০ সঞ্চয় হবে।\n২. রাউন্ড-আপ সেভিংস (Round-Up Saving): খুচরা খরচকে নিকটতম পূর্ণ সংখ্যায় রাউন্ড করে বাড়তি অংশ সঞ্চয় করা হয়। যেমন ৳৮৭ খরচ হলে ৳১০০ ধরে ৳১৩ সঞ্চয় হবে, অথবা ৳৪৬৩ খরচ হলে ৳৫০ ধরে ৳৩৭ সঞ্চয় হবে।\n৩. গোল-ভিত্তিক সেভিংস (Goal-Based Saving): নির্দিষ্ট লক্ষ্য (যেমন ল্যাপটপ বা জরুরি তহবিল) ও মেয়াদের জন্য মাসিক কিস্তি বা নিয়মিত মাইক্রো-সঞ্চয়ের মাধ্যমে ধীরে ধীরে লক্ষ্য পূরণ করা যায়।\n৪. থ্রেশহোল্ড সেভিংস (Threshold Saving): ৳৫০০-এর বেশি খরচ করলে পরবর্তী পূর্ণ শতকে রাউন্ড করে সঞ্চয় করা হয়।\nব্যবহারকারী যেকোনো সময় 'Pause savings' বা 'Resume savings' বলে সঞ্চয় স্থগিত বা পুনরায় চালু করতে পারেন।",
+    "contentEn": "Micro-Savings operates via four student-friendly modes:\n1. Percentage Saving: Automatically saves a set percentage (e.g. 1%, 2%, 5%) from every transaction. For example, spending ৳500 saves ৳10.\n2. Round-Up Saving: Rounds transactions up to the next round figure and deposits the difference. For example, ৳87 rounds to ৳100 saving ৳13, or ৳463 rounds to ৳500 saving ৳37.\n3. Goal-Based Saving: Target a specific amount within a timeline (e.g. ৳10,000 in 3 months = ~৳3,333/month) supported by micro-saving strategies.\n4. Threshold Saving: When spending exceeds ৳500, rounds up to the next hundred.\nUsers can pause or resume savings at any time by saying 'Pause savings' or 'Resume savings'."
+  },
+  {
+    "id": "kb-guardian-mode",
+    "category": "guardian",
+    "titleBn": "গার্ডিয়ান মোড এবং চাইল্ড অ্যাকাউন্ট পলিসি",
+    "titleEn": "Guardian Mode and Child Account Policies",
+    "keywords": ["guardian", "child", "limit", "parent", "অভিভাবক", "সন্তান", "অনুমোদন", "লিমিট"],
+    "contentBn": "অভিভাবক বা গার্ডিয়ান মোডে ৩টি নিয়ন্ত্রণ স্তর রয়েছে:\n১. APPROVAL_REQUIRED: সন্তানের প্রতিটি আর্থিক লেনদেনের জন্য অভিভাবকের পিন অনুমোদনের প্রয়োজন হয়। অনুমোদন না দেওয়া পর্যন্ত টাকা কাটা হয় না।\n২. LIMITED: অভিভাবকের নির্ধারিত দৈনিক খরচের সীমার (যেমন ৳৫০০) মধ্যে সন্তান নিজে খরচ করতে পারে। সীমা অতিক্রম করলে লেনদেন আটকে যায়।\n৩. UPDATES_ONLY: সন্তান স্বাধীনভাবে লেনদেন করতে পারে এবং প্রতিটি লেনদেনের নোটিফিকেশন অভিভাবকের কাছে পৌঁছে যায়।\nসন্তানের প্রোফাইল অভিভাবক প্যানেল থেকে যেকোনো সময় সক্রিয়, পরিবর্তন বা নিষ্ক্রিয় করা যায়।",
+    "contentEn": "Guardian Mode operates with 3 control tiers:\n1. APPROVAL_REQUIRED: Every child transaction requires explicit Guardian T2 PIN approval before funds are debited.\n2. LIMITED: Child spends freely within the configured daily limit (e.g. ৳500); transfers exceeding the limit are blocked.\n3. UPDATES_ONLY: Child spends independently while the guardian receives real-time informational notifications.\nGuardian links can be updated or deactivated from the Guardian panel."
+  },
+  {
+    "id": "kb-security-pin",
+    "category": "security",
+    "titleBn": "নিরাপত্তা ও পিন গোপনীয়তার নিয়ম",
+    "titleEn": "Security & PIN Confidentiality Guidelines",
+    "keywords": ["security", "pin", "scam", "otp", "নিরাপত্তা", "পিন", "স্ক্যাম", "পাসওয়ার্ড"],
+    "contentBn": "নিরাপত্তা নির্দেশিকা:\n• আপনার ৪-সংখ্যার গোপন পিন (PIN) বা ওয়ান-টাইম পাসওয়ার্ড (OTP) কখনো কাউকে জানাবেন না। কোনো ব্যাংক বা এমএফএস প্রতিনিধি কখনোই আপনার পিন জানতে চাইবে না।\n• এআই চ্যাট বা মেসেজে কখনোই সরাসরি পিন লিখবেন না। পিন কেবল নিরাপদ সিস্টেম মডালে যাচাইয়ের জন্য ব্যবহৃত হয়।\n• সন্দেহজনক এসএমএস বা লটারির বার্তা পেলে 'Check Message' টুলের মাধ্যমে তা যাচাই করে নিন।",
+    "contentEn": "Security Guidelines:\n• Never share your 4-digit PIN or OTP with anyone. No financial institution or agent will ever ask for your PIN.\n• Never enter your PIN into chat conversations. PINs are strictly verified inside dedicated secure system modals.\n• If you receive suspicious SMS messages, verify them using the 'Check Message' safety feature."
+  },
+  {
+    "id": "kb-group-split",
+    "category": "group_bill",
+    "titleBn": "গ্রুপ বিল ও স্প্লিট পেমেন্ট গাইড",
+    "titleEn": "Group Bill and Split Payment Guide",
+    "keywords": ["group bill", "split", "friends", "গ্রুপ বিল", "ভাগাভাগি", "শেয়ার"],
+    "contentBn": "গ্রুপ বিলের মাধ্যমে বন্ধুদের সাথে রেস্তোরাঁর বিল, ভ্রমণ খরচ বা যৌথ খরচ সহজে ভাগ করা যায়। ক্রিয়েটর মোট টাকার পরিমাণ ও বন্ধুদের নম্বর দিলে সবার জন্য সমান বা কাস্টম শেয়ার তৈরি হয়। প্রত্যেকে তাদের নিজস্ব শেয়ার পিন দিয়ে পরিশোধ করতে পারে এবং লাইভ কালেকশন প্রগ্রেস রিয়েল-টাইমে আপডেট হয়।",
+    "contentEn": "Group Bill allows easy splitting of restaurant, travel, or shared expenses. The creator specifies the total amount and participant numbers, allocating equal or custom shares. Participants pay their individual share with PIN step-up, and collection progress updates live via Socket.IO."
+  },
+  {
+    "id": "kb-scheduler-rules",
+    "category": "automation",
+    "titleBn": "স্বয়ংক্রিয় শিডিউল এবং শর্তযুক্ত রুল",
+    "titleEn": "Scheduled Payments and Conditional Rules",
+    "keywords": ["schedule", "rule", "recurring", "automation", "শিডিউল", "রুল", "অটোমেশন"],
+    "contentBn": "শিডিউল ও রুল অটোমেশন:\n• শিডিউল: নির্দিষ্ট দিনে বা প্রতি মাসে বিদ্যুৎ বিল, রিচার্জ বা কিস্তি স্বয়ংক্রিয়ভাবে পরিশোধ করার সময় নির্ধারণ করা যায়।\n• শর্তযুক্ত রুল: ওয়ালেটে টাকা আসলে নির্দিষ্ট শর্তে অটো-অ্যাকশন চালানো যায় (যেমন: 'টাকা আসলে বিদ্যুৎ বিল দাও')। প্রতিটি স্বয়ংক্রিয় লেনদেনের জন্য সর্বোচ্চ অ্যামাউন্ট ম্যান্ডেট সুরক্ষিত থাকে।",
+    "contentEn": "Automation features:\n• Schedules: Automate one-time, daily, weekly, or monthly recurring bills and recharges with persistent background execution.\n• Conditional Rules: Trigger actions based on events (e.g. WHEN wallet receives ৳1,000, THEN pay utility bill) within authorized spending mandates."
+  },
+  {
+    "id": "kb-account-tiers",
+    "category": "account",
+    "titleBn": "অ্যাকাউন্ট টায়ার ও লেনদেন সীমা",
+    "titleEn": "Account Tiers and Transaction Limits",
+    "keywords": ["tier", "limit", "account", "সীমা", "টায়ার", "লিমিট"],
+    "contentBn": "অ্যাকাউন্ট টায়ার ও নিরাপত্তা:\n• T1 (বেসিক): ব্যালেন্স চেক, ইতিহাস দেখা, নোটিফিকেশন চেক। কোনো পিনের প্রয়োজন নেই।\n• T2 (আর্থিক লেনদেন): সেন্ড মানি, ক্যাশ আউট, রিচার্জ ও বিল পের জন্য ৪-সংখ্যার পিন স্টেপ-আপ বাধ্যতামূলক। সাধারণ গ্রাহকের দৈনিক সীমা ৳২৫,০০০। চাইল্ড অ্যাকাউন্টের ডিফল্ট দৈনিক সীমা ৳৫০০।\n• বায়োমেট্রিক অথেনটিকেশন (WebAuthn): ফিঙ্গারপ্রিন্ট বা ফেস আইডি দিয়ে দ্রুত ও নিরাপদ স্টেপ-আপ সুবিধা।",
+    "contentEn": "Account tiers and security levels:\n• Tier 1 (Read-Only): Checking balance, transactions, and notifications requires standard login.\n• Tier 2 (Financial Mutations): Sending money, cash out, bill pay, and recharge require 4-digit PIN step-up. Standard daily spending limit is ৳25,000. Child account default daily limit is ৳500.\n• Biometric Authentication (WebAuthn): Fast, secure step-up verification via platform biometric credentials."
+  }
+]
