@@ -7,6 +7,8 @@ import {
   IoCloseCircleOutline,
   IoTrashOutline,
   IoSettingsOutline,
+  IoEyeOutline,
+  IoEyeOffOutline,
 } from 'react-icons/io5';
 import { GuardianColorIcon, CheckmarkSuccessColorIcon } from '../ui/FlaticonIcons.jsx';
 import { useAuthStore } from '../../stores/authStore.js';
@@ -22,7 +24,13 @@ export function GuardianModal({ isOpen, onClose }) {
   const [showAddChild, setShowAddChild] = useState(false);
   const [childName, setChildName] = useState('');
   const [childPhone, setChildPhone] = useState('');
+  const [childPin, setChildPin] = useState('');
+  const [childConfirmPin, setChildConfirmPin] = useState('');
+  const [showChildPin, setShowChildPin] = useState(false);
   const [dailyLimit, setDailyLimit] = useState('500');
+  const [editingChildLimit, setEditingChildLimit] = useState(null);
+  const [newLimitVal, setNewLimitVal] = useState('');
+  const [limitModalError, setLimitModalError] = useState('');
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
 
@@ -66,6 +74,15 @@ export function GuardianModal({ isOpen, onClose }) {
 
   const handleCreateChild = async (e) => {
     e.preventDefault();
+    if (!/^\d{4}$/.test(childPin)) {
+      setErr('সন্তানের অ্যাকাউন্টের জন্য ৪-সংখ্যার পিন নম্বর দিন (4-digit numeric PIN is required)');
+      return;
+    }
+    if (childPin !== childConfirmPin) {
+      setErr('পিন নম্বর দুটি মিলছে না (PIN and Confirm PIN do not match)');
+      return;
+    }
+
     setLoading(true);
     setErr('');
     setMsg('');
@@ -75,7 +92,7 @@ export function GuardianModal({ isOpen, onClose }) {
         phone: childPhone.trim(),
         dob: '2012-05-15',
         birthCertificateNumber: '20121234567890123',
-        pin: '1234',
+        pin: childPin,
         dailyLimitPoisha: Number(dailyLimit) * 100,
       });
 
@@ -83,6 +100,8 @@ export function GuardianModal({ isOpen, onClose }) {
       setShowAddChild(false);
       setChildName('');
       setChildPhone('');
+      setChildPin('');
+      setChildConfirmPin('');
       await loadData();
     } catch (error) {
       setErr(error.response?.data?.message || error.message);
@@ -301,6 +320,54 @@ export function GuardianModal({ isOpen, onClose }) {
                   className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 font-bold focus:outline-none focus:border-brand-blue"
                 />
               </div>
+
+              {/* Child 4-digit PIN setup */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1">
+                    ৪-সংখ্যার পিন (PIN)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showChildPin ? 'text' : 'password'}
+                      maxLength={4}
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      name="child-pin"
+                      value={childPin}
+                      onChange={(e) => setChildPin(e.target.value.replace(/\D/g, ''))}
+                      placeholder="••••"
+                      required
+                      className="w-full px-3 py-2 pr-8 rounded-xl bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 font-mono tracking-widest focus:outline-none focus:border-brand-blue"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowChildPin(!showChildPin)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none"
+                    >
+                      {showChildPin ? <IoEyeOffOutline className="w-4 h-4" /> : <IoEyeOutline className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1">
+                    পিন নিশ্চিত করুন
+                  </label>
+                  <input
+                    type={showChildPin ? 'text' : 'password'}
+                    maxLength={4}
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    name="child-confirm-pin"
+                    value={childConfirmPin}
+                    onChange={(e) => setChildConfirmPin(e.target.value.replace(/\D/g, ''))}
+                    placeholder="••••"
+                    required
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 font-mono tracking-widest focus:outline-none focus:border-brand-blue"
+                  />
+                </div>
+              </div>
               <div className="flex gap-2 pt-1">
                 <button
                   type="button"
@@ -425,12 +492,15 @@ export function GuardianModal({ isOpen, onClose }) {
                               <button
                                 type="button"
                                 onClick={() => {
-                                  const newLim = prompt('নতুন দৈনিক সীমা লিখুন (টাকায়):', currentLimit.toString());
-                                  if (newLim && !isNaN(Number(newLim))) {
-                                    handleUpdateMode(childUserId, 'LIMITED', Number(newLim) * 100);
-                                  }
+                                  setEditingChildLimit({
+                                    childUserId,
+                                    childName: child.name,
+                                    currentLimit,
+                                  });
+                                  setNewLimitVal(currentLimit.toString());
+                                  setLimitModalError('');
                                 }}
-                                className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                                className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
                               >
                                 পরিবর্তন
                               </button>
@@ -446,6 +516,103 @@ export function GuardianModal({ isOpen, onClose }) {
           )}
         </div>
       </div>
+
+      {/* In-App Child Daily Limit Modal */}
+      {editingChildLimit && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl shadow-2xl p-5 border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                  দৈনিক খরচের সীমা পরিবর্তন
+                </h4>
+                <p className="text-[11px] text-slate-500">
+                  {editingChildLimit.childName || 'সন্তান অ্যাকাউন্ট'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingChildLimit(null)}
+                className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <IoCloseOutline className="w-5 h-5" />
+              </button>
+            </div>
+
+            {limitModalError && (
+              <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/80 text-rose-600 dark:text-rose-300 text-xs font-semibold">
+                {limitModalError}
+              </div>
+            )}
+
+            <div>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1">
+                নতুন দৈনিক সীমা (টাকায়)
+              </label>
+              <input
+                type="number"
+                min="10"
+                max="50000"
+                value={newLimitVal}
+                onChange={(e) => {
+                  setNewLimitVal(e.target.value);
+                  setLimitModalError('');
+                }}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-sm font-bold text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-blue-600"
+                placeholder="যেমন: ৫০০"
+                autoFocus
+              />
+            </div>
+
+            {/* Quick preset buttons */}
+            <div>
+              <p className="text-[11px] font-semibold text-slate-500 mb-1.5">দ্রুত নির্বাচন:</p>
+              <div className="grid grid-cols-4 gap-1.5">
+                {[200, 500, 1000, 2000].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setNewLimitVal(preset.toString())}
+                    className={`py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                      Number(newLimitVal) === preset
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    ৳{preset}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setEditingChildLimit(null)}
+                className="flex-1 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+              >
+                বাতিল
+              </button>
+              <button
+                type="button"
+                disabled={actionLoading || !newLimitVal || isNaN(Number(newLimitVal)) || Number(newLimitVal) <= 0}
+                onClick={async () => {
+                  const num = Number(newLimitVal);
+                  if (isNaN(num) || num <= 0) {
+                    setLimitModalError('সঠিক পরিমাণ লিখুন');
+                    return;
+                  }
+                  await handleUpdateMode(editingChildLimit.childUserId, 'LIMITED', num * 100);
+                  setEditingChildLimit(null);
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-blue-600 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-xs"
+              >
+                {actionLoading ? 'সংরক্ষণ হচ্ছে...' : 'সংরক্ষণ করুন'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Styled Guardian Approval Modal */}
       <GuardianApprovalModal

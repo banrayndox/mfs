@@ -166,7 +166,7 @@ export function SendMoneyModal({ isOpen, onClose, onSuccess }) {
             </button>
           </div>
         ) : (
-          <form onSubmit={handleSend} className="space-y-3">
+          <form onSubmit={handleSend} className="space-y-3" autoComplete="off">
             {error && (
               <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/80 text-rose-600 dark:text-rose-300 text-xs font-medium border border-rose-200 dark:border-rose-900 flex items-center gap-1.5">
                 <IoAlertCircleOutline className="w-4 h-4 shrink-0" />
@@ -180,6 +180,9 @@ export function SendMoneyModal({ isOpen, onClose, onSuccess }) {
               </label>
               <input
                 type="tel"
+                name="recipient-phone"
+                autoComplete="off"
+                data-lpignore="true"
                 value={recipientPhone}
                 onChange={(e) => setRecipientPhone(e.target.value)}
                 placeholder="01XXXXXXXXX"
@@ -220,6 +223,8 @@ export function SendMoneyModal({ isOpen, onClose, onSuccess }) {
               </label>
               <input
                 type="number"
+                name="txn-amount"
+                autoComplete="off"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
@@ -247,10 +252,16 @@ export function SendMoneyModal({ isOpen, onClose, onSuccess }) {
               </label>
               <input
                 type="password"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                name="transaction-pin"
+                id="sendmoney-txn-pin"
+                data-lpignore="true"
+                data-1p-ignore="true"
                 maxLength={4}
                 value={pin}
                 disabled={!!recipientError}
-                onChange={(e) => setPin(e.target.value)}
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
                 placeholder="••••"
                 required
                 className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue text-center tracking-widest text-lg disabled:opacity-50"

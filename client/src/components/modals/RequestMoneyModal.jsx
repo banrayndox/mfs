@@ -646,6 +646,11 @@ export function RequestMoneyModal({ isOpen, onClose, defaultMode = 'individual',
                               <div className="flex items-center gap-2">
                                 <input
                                   type="password"
+                                  inputMode="numeric"
+                                  autoComplete="one-time-code"
+                                  name="split-pay-pin"
+                                  data-lpignore="true"
+                                  data-1p-ignore="true"
                                   maxLength={4}
                                   value={pin}
                                   onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}

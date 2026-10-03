@@ -232,13 +232,16 @@ export function GuardianApprovalModal({ isOpen, onClose, transaction, onSuccess 
                 inputMode="numeric"
                 maxLength={4}
                 value={pin}
+                autoComplete="one-time-code"
+                name="guardian-pin"
+                data-lpignore="true"
                 disabled={isSubmitting || !!success}
                 onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
                 placeholder="••••"
                 required
                 className="w-full px-3.5 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 text-center text-xl tracking-[0.5em] font-mono focus:outline-none focus:border-amber-500 transition-all disabled:opacity-50"
               />
-              <div className="absolute right-3.5 top-3.5 text-slate-400 pointer-events-none">
+              <div className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center justify-center text-slate-400 pointer-events-none">
                 <IoKeyOutline className="w-5 h-5" />
               </div>
             </div>

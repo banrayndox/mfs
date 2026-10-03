@@ -1,5 +1,6 @@
-import { Schedule, User, Wallet, Notification, AuditLog } from '../models/index.js';
+import { Schedule, Reminder, User, Wallet, Notification, AuditLog } from '../models/index.js';
 import { sendMoney, payBill, mobileRecharge } from './transaction.service.js';
+import { emitToUser, notifyNewNotification } from './socket.service.js';
 import logger from '../utils/logger.js';
 
 let workerInterval = null;
@@ -194,12 +195,60 @@ export async function pollAndExecuteDueSchedules() {
 }
 
 /**
+ * Worker polling loop: finds and executes due reminders, creating notifications and socket events.
+ */
+export async function pollAndExecuteDueReminders() {
+  const now = new Date();
+  try {
+    const dueReminders = await Reminder.find({
+      isCompleted: false,
+      dueAt: { $lte: now },
+    }).limit(20);
+
+    for (const reminder of dueReminders) {
+      reminder.isCompleted = true;
+      reminder.completedAt = now;
+      await reminder.save();
+
+      const notif = await Notification.create({
+        userId: reminder.userId,
+        title: 'রিমাইন্ডার সময় হয়েছে (Reminder Due)',
+        body: reminder.title + (reminder.amount ? ` (৳${reminder.amount})` : ''),
+        type: 'reminder',
+        metadata: {
+          reminderId: reminder._id,
+          amount: reminder.amount,
+          deepLink: reminder.deepLink,
+        },
+      });
+
+      emitToUser(reminder.userId.toString(), 'reminder:due', {
+        reminder,
+        notification: notif,
+      });
+      notifyNewNotification(reminder.userId.toString(), notif);
+      logger.info({ reminderId: reminder._id, userId: reminder.userId }, 'Dispatched due reminder notification.');
+    }
+  } catch (err) {
+    logger.error({ err }, 'Reminder polling error');
+  }
+}
+
+/**
+ * Poll both scheduled payments and reminders.
+ */
+export async function pollAllDueJobs() {
+  await pollAndExecuteDueSchedules();
+  await pollAndExecuteDueReminders();
+}
+
+/**
  * Start the persistent background scheduler worker.
  */
 export function startSchedulerWorker(intervalMs = 5000) {
   if (workerInterval) return;
   logger.info(`Starting Scheduler Worker (polling every ${intervalMs / 1000}s)...`);
-  workerInterval = setInterval(pollAndExecuteDueSchedules, intervalMs);
+  workerInterval = setInterval(pollAllDueJobs, intervalMs);
 }
 
 /**
@@ -216,6 +265,8 @@ export default {
   createSchedule,
   executeScheduledJob,
   pollAndExecuteDueSchedules,
+  pollAndExecuteDueReminders,
+  pollAllDueJobs,
   startSchedulerWorker,
   stopSchedulerWorker,
 };

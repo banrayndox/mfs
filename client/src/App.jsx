@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FrameWrapper } from './components/layout/FrameWrapper.jsx';
+import { RealtimeToastBanner } from './components/ui/RealtimeToastBanner.jsx';
 import { BrandMark } from './components/ui/BrandMark.jsx';
 
 import { Header } from './components/layout/Header.jsx';
@@ -270,6 +271,9 @@ export function App() {
 
   return (
     <FrameWrapper>
+      {/* Global Realtime Toast Banner */}
+      <RealtimeToastBanner />
+
       {/* Header with brand mark, balance pill, notifications, quick switch & logout */}
       <Header
         onOpenNotifications={() => setIsNotificationsOpen(true)}

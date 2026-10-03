@@ -343,13 +343,14 @@ export function AuthModal({ isOpen, onClose }) {
               <input
                 type="password"
                 maxLength={4}
+                inputMode="numeric"
                 value={pin}
-                onChange={(e) => setPin(e.target.value)}
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
                 placeholder="••••"
                 required
                 className="w-full px-3.5 py-2 pl-9 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue tracking-widest text-lg font-bold"
               />
-              <IoLockClosedOutline className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+              <IoLockClosedOutline className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             </div>
           </div>
 
@@ -363,13 +364,14 @@ export function AuthModal({ isOpen, onClose }) {
                 <input
                   type="password"
                   maxLength={4}
+                  inputMode="numeric"
                   value={confirmPin}
-                  onChange={(e) => setConfirmPin(e.target.value)}
+                  onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
                   placeholder="••••"
                   required
                   className="w-full px-3.5 py-2 pl-9 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue tracking-widest text-lg font-bold"
                 />
-                <IoLockClosedOutline className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                <IoLockClosedOutline className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               </div>
             </div>
           )}

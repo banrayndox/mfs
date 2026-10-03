@@ -398,6 +398,7 @@ export function GuestAuthScreen({ onLoginSuccess }) {
               <input
                 type={showPin ? 'text' : 'password'}
                 maxLength={4}
+                inputMode="numeric"
                 required
                 value={pin}
                 onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
@@ -407,7 +408,7 @@ export function GuestAuthScreen({ onLoginSuccess }) {
               <button
                 type="button"
                 onClick={() => setShowPin(!showPin)}
-                className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none"
               >
                 {showPin ? <IoEyeOffOutline className="w-5 h-5" /> : <IoEyeOutline className="w-5 h-5" />}
               </button>
@@ -423,6 +424,7 @@ export function GuestAuthScreen({ onLoginSuccess }) {
               <input
                 type={showPin ? 'text' : 'password'}
                 maxLength={4}
+                inputMode="numeric"
                 required
                 value={confirmPin}
                 onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}

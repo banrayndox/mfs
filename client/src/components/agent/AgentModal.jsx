@@ -47,8 +47,8 @@ export function AgentModal({ isOpen, onClose }) {
             sender: 'agent',
             text:
               i18n.language === 'bn'
-                ? 'আসসালামু আলাইকুম! আমি আপনার এআই ফাইন্যান্সিয়াল কপাইলট (AI Financial Copilot)।\nব্যালেন্স ও লেনদেন চেক, খরচ বিশ্লেষণ ("টাকা শেষ হয় কেন?"), ২% বা রাউন্ড-আপ সঞ্চয় চালু, টাকা পাঠানো বা অ্যাপের যেকোনো ফিচার নিয়ন্ত্রণ করতে আমাকে বলতে পারেন।'
-                : 'Hello! I am your AI Financial Copilot.\nAsk me to check balance, explain your spending habits, enable 2% or round-up micro-savings, send money safely with Guardian review, or control app features.',
+                ? 'আসসালামু আলাইকুম! আমি আপনার এআই কপাইলট (AI Copilot)।\nব্যালেন্স ও লেনদেন চেক, খরচ বিশ্লেষণ ("টাকা শেষ হয় কেন?"), ২% বা রাউন্ড-আপ সঞ্চয় চালু, টাকা পাঠানো বা অ্যাপের যেকোনো ফিচার নিয়ন্ত্রণ করতে আমাকে বলতে পারেন।'
+                : 'Hello! I am your AI Copilot.\nAsk me to check balance, explain your spending habits, enable 2% or round-up micro-savings, send money safely with Guardian review, or control app features.',
           },
         ]);
       }
@@ -276,7 +276,7 @@ export function AgentModal({ isOpen, onClose }) {
             <div>
               <div className="flex items-center gap-1.5">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  AI Financial Copilot
+                  AI Copilot
                 </h3>
                 {isMockAi ? (
                   <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
@@ -539,22 +539,16 @@ export function AgentModal({ isOpen, onClose }) {
               🔄 {i18n.language === 'bn' ? 'রাউন্ড-আপ' : 'Round-Up'}
             </button>
             <button
-              onClick={() => handleSendMessage(i18n.language === 'bn' ? 'ল্যাপটপ কেনার জন্য সঞ্চয় লক্ষ্য সেট করো' : 'I am saving for a laptop')}
+              onClick={() => handleSendMessage(i18n.language === 'bn' ? 'কাল সকাল ১০টায় বিদ্যুৎ বিল দেওয়ার রিমাইন্ডার দাও' : 'Set a reminder to pay electricity bill tomorrow')}
               className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 whitespace-nowrap hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
             >
-              💻 {i18n.language === 'bn' ? 'ল্যাপটপ লক্ষ্য' : 'Laptop Goal'}
+              ⏰ {i18n.language === 'bn' ? 'রিমাইন্ডার' : 'Reminder'}
             </button>
             <button
               onClick={() => handleSendMessage(i18n.language === 'bn' ? 'সেন্ড মানি এবং ক্যাশ আউটের মধ্যে পার্থক্য কী?' : 'What is the difference between Send Money and Cash Out?')}
               className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 whitespace-nowrap hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
             >
               📖 {i18n.language === 'bn' ? 'সার্ভিস গাইড' : 'Service Guide'}
-            </button>
-            <button
-              onClick={() => handleSendMessage(i18n.language === 'bn' ? 'লগআউট' : 'Logout')}
-              className="px-2.5 py-1 rounded-full bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 whitespace-nowrap hover:bg-rose-100 dark:hover:bg-rose-900 transition-colors"
-            >
-              🚪 {i18n.language === 'bn' ? 'লগআউট' : 'Logout'}
             </button>
           </div>
         </div>

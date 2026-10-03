@@ -2477,8 +2477,8 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
 
   return {
     reply: language === 'bn'
-      ? 'আমি আপনার আর্থিক সহকারী (AI Financial Copilot)। আপনি আমাকে ব্যালেন্স দেখতে, খরচ বিশ্লেষণ করতে, টাকা পাঠাতে, ২% বা রাউন্ড-আপ সঞ্চয় চালু করতে, রিমাইন্ডার সেট করতে বা অ্যাপের যেকোনো পাতায় যেতে বলতে পারেন।'
-      : 'I am your AI Financial Copilot. You can ask me to check balance, explain your spending, send money, enable 2% or round-up savings, set reminders, or navigate the application.',
+      ? 'আমি আপনার আর্থিক সহকারী (AI Copilot)। আপনি আমাকে ব্যালেন্স দেখতে, খরচ বিশ্লেষণ করতে, টাকা পাঠাতে, ২% বা রাউন্ড-আপ সঞ্চয় চালু করতে, রিমাইন্ডার সেট করতে বা অ্যাপের যেকোনো পাতায় যেতে বলতে পারেন।'
+      : 'I am your AI Copilot. You can ask me to check balance, explain your spending, send money, enable 2% or round-up savings, set reminders, or navigate the application.',
     pendingAction: null,
   };
 }

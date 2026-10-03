@@ -148,7 +148,7 @@ export function History() {
       default:
         return {
           title: tx.type.replace('_', ' ').toUpperCase(),
-          subtitle: tx.channel === 'agent' ? 'AI Agent' : 'Transaction',
+          subtitle: tx.channel === 'agent' ? 'AI Copilot' : 'Transaction',
         };
     }
   };
@@ -325,7 +325,7 @@ export function History() {
                   )}
                   {tx.channel === 'agent' && (
                     <span className="px-2 py-0.5 rounded-full bg-brand-yellow/20 text-brand-blue dark:text-brand-yellow font-bold">
-                      AI Agent
+                      AI Copilot
                     </span>
                   )}
                 </div>

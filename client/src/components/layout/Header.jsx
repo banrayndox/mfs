@@ -9,7 +9,7 @@ import { formatCurrency } from '../../utils/formatters.js';
 
 export function Header({ onOpenNotifications, onOpenAuth, onOpenAgentDashboard, onLogout }) {
   const { t, i18n } = useTranslation();
-  const { user, balanceVisible, revealBalance, hideBalance } = useAuthStore();
+  const { user, balanceVisible, revealBalance, hideBalance, isBalanceLoading } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
   const { isMockAi, unreadNotifications } = useSystemStore();
 
@@ -130,6 +130,9 @@ export function Header({ onOpenNotifications, onOpenAuth, onOpenAgentDashboard, 
                 onClick={hideBalance}
                 className="px-4 py-1.5 rounded-full bg-brand-blue text-white text-sm font-bold shadow hover:bg-brand-blue-hover transition-all flex items-center gap-1.5"
               >
+                {isBalanceLoading ? (
+                  <span className="w-3.5 h-3.5 border-2 border-brand-yellow border-t-transparent rounded-full animate-spin shrink-0"></span>
+                ) : null}
                 <span>{formatCurrency(user.balancePoisha, i18n.language)}</span>
               </button>
             ) : (

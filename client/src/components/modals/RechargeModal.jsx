@@ -184,9 +184,15 @@ export function RechargeModal({ isOpen, onClose, onSuccess }) {
               </label>
               <input
                 type="password"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                name="recharge-pin"
+                id="recharge-txn-pin"
+                data-lpignore="true"
+                data-1p-ignore="true"
                 maxLength={4}
                 value={pin}
-                onChange={(e) => setPin(e.target.value)}
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
                 placeholder="••••"
                 required
                 className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue text-center tracking-widest text-lg"

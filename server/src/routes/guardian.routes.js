@@ -100,13 +100,19 @@ guardianRouter.post('/link', requireAuth, requireTier('T3'), async (req, res, ne
 guardianRouter.post('/child', requireAuth, async (req, res, next) => {
   try {
     const { name, phone, dob, birthCertificateNumber, pin, dailyLimitPoisha } = req.body;
+    if (!pin || !/^\d{4}$/.test(String(pin))) {
+      return res.status(400).json({
+        success: false,
+        message: 'সন্তানের জন্য ৪-সংখ্যার পিন নম্বর আবশ্যক (4-digit numeric PIN is required for child account)',
+      });
+    }
     const result = await createChildProfile({
       guardianUserId: req.user._id,
       name,
       phone,
       dob,
       birthCertificateNumber,
-      pin,
+      pin: String(pin),
       dailyLimitPoisha,
     });
     res.status(201).json({ success: true, ...result });

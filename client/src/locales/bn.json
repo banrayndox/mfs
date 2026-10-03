@@ -6,7 +6,7 @@
   "nav": {
     "home": "হোম",
     "account": "অ্যাকাউন্ট",
-    "aiAssistant": "এআই এজেন্ট",
+    "aiAssistant": "এআই কপাইলট",
     "history": "লেনদেন",
     "more": "আরও"
   },
@@ -41,7 +41,7 @@
     "guardianMode": "অভিভাবক মোড",
     "checkMessage": "বার্তা পরীক্ষা",
     "reminders": "রিমাইন্ডার",
-    "aiAssistant": "এআই সহকারী",
+    "aiAssistant": "এআই কপাইলট",
     "scheduledRules": "শিডিউল ও রুলস",
     "groupBill": "গ্রুপ বিল"
   },

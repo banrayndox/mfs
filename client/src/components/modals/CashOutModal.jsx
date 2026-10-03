@@ -304,10 +304,16 @@ export function CashOutModal({ isOpen, onClose, onSuccess }) {
               </label>
               <input
                 type="password"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                name="cashout-pin"
+                id="cashout-txn-pin"
+                data-lpignore="true"
+                data-1p-ignore="true"
                 maxLength={4}
                 value={pin}
                 disabled={!verifiedAgent || !!agentError}
-                onChange={(e) => setPin(e.target.value)}
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
                 placeholder="••••"
                 required
                 className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue text-center tracking-widest text-lg disabled:opacity-50"

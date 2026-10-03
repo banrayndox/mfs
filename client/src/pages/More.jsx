@@ -6,8 +6,6 @@ import {
   KeyPinColorIcon,
   LanguageColorIcon,
   ThemeColorIcon,
-  BiometricsColorIcon,
-  SwitchAccountColorIcon,
   ProfileColorIcon,
   KycColorIcon,
   LogoutColorIcon,
@@ -71,20 +69,11 @@ export function More({ onOpenAuth, onLogout }) {
           action: toggleTheme,
           badge: theme === 'dark' ? 'Dark' : 'Light',
         },
-        { id: 'bio', icon: BiometricsColorIcon, label: t('more.biometrics'), subtitle: 'WebAuthn Passkey' },
       ],
     },
     {
       title: 'অ্যাকাউন্ট সার্ভিস ও রোল (Account & Roles)',
       items: [
-        {
-          id: 'switch',
-          icon: SwitchAccountColorIcon,
-          label: 'অ্যাকাউন্ট পরিবর্তন / লগইন (Switch Account / Register)',
-          subtitle: `বর্তমান অ্যাকাউন্ট: ${user?.name || 'ব্যবহারকারী'} (${user?.accountType || 'CUSTOMER'})`,
-          action: onOpenAuth,
-          badge: 'সুইচ',
-        },
         /* Agent Portal entry removed from More page per requirement */
         { id: 'profile', icon: ProfileColorIcon, label: 'প্রোফাইল তথ্য (Profile)', subtitle: 'নাম, মোবাইল ও এনআইডি স্ট্যাটাস' },
         { id: 'kyc', icon: KycColorIcon, label: 'কেওয়াইসি ভেরিফিকেশন (KYC)', subtitle: 'এনআইডি / জন্ম নিবন্ধন (Demo)' },
