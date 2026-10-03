@@ -502,6 +502,6 @@ npm run build
 
 ## Team
 
-Developed for the MFS Hackathon / Competition by the **FinMate AI Team**.
+Developed for the MFS Hackathon / Competition by the **NOT HUMAN**.
 
 > All rights reserved. Synthetic prototype. No real funds are processed.
