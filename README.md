@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🛡️ FinMate AI (Guardian MFS)
+# 🛡️ UPAY - powered by ai
 
 **Bilingual (Bangla/English) AI Financial Operating Layer & Mobile Financial Service Platform**
 
