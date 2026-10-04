@@ -141,6 +141,41 @@ export function classifyIntent(text) {
     return { type: 'cross_user_probe' };
   }
 
+  // 1d. Irrelevant Non-Financial Queries (politely refuse instead of hallucinating)
+  if (
+    lower.includes('capital of') ||
+    lower.includes('weather') ||
+    lower.includes('write a poem') ||
+    lower.includes('write poem') ||
+    lower.includes('poem') ||
+    lower.includes('tell me a joke') ||
+    lower.includes('tell a joke') ||
+    lower.includes('joke') ||
+    lower.includes('write python') ||
+    lower.includes('write code') ||
+    lower.includes('python code') ||
+    lower.includes('javascript code') ||
+    lower.includes('coding') ||
+    lower.includes('who won') ||
+    lower.includes('world cup') ||
+    lower.includes('recipe') ||
+    lower.includes('recipes') ||
+    lower.includes('how to cook') ||
+    lower.includes('lyrics') ||
+    lower.includes('president of') ||
+    lower.includes('prime minister of') ||
+    lower.includes('meaning of life') ||
+    lower.includes('solve this math') ||
+    lower.includes('trivia') ||
+    lower.includes('আবহাওয়া') ||
+    lower.includes('কবিতা') ||
+    lower.includes('কৌতুক') ||
+    lower.includes('রান্নার রেসিপি') ||
+    lower.includes('গান গাও')
+  ) {
+    return { type: 'irrelevant' };
+  }
+
   // 2. Application Control: Logout
   if (
     lower === 'logout' ||
@@ -329,11 +364,11 @@ export function classifyIntent(text) {
     return { type: 'update_savings_goal' };
   }
 
-  // 17. Savings Goal Creation: "Create a savings goal of 10,000 taka" / "I want to save 10,000 in 3 months"
+  // 17. Savings Goal Creation: "Create a savings goal of 10,000 taka" / "I want to save 5000 taka in the next 2 months" / "Every week save 500 taka for my laptop" / "Make a savings plan for my new laptop"
   if (
-    (lower.includes('savings goal') || lower.includes('save') || lower.includes('সঞ্চয় লক্ষ্য') || lower.includes('জমাতে চাই') || lower.includes('নতুন লক্ষ্য')) &&
-    (lower.includes('goal') || lower.includes('লক্ষ্য') || lower.includes('month') || lower.includes('মাস')) &&
-    (/\d+/.test(lower))
+    (lower.includes('savings goal') || lower.includes('save') || lower.includes('সঞ্চয় লক্ষ্য') || lower.includes('জমাতে চাই') || lower.includes('নতুন লক্ষ্য') || lower.includes('savings plan') || lower.includes('সেভিংস প্ল্যান') || lower.includes('সঞ্চয় পরিকল্পনা') || lower.includes('সেভিংস গোল') || lower.includes('ডিপিএস') || lower.includes('dps')) &&
+    (lower.includes('goal') || lower.includes('লক্ষ্য') || lower.includes('month') || lower.includes('মাস') || lower.includes('week') || lower.includes('সপ্তাহ') || lower.includes('plan') || lower.includes('পরিকল্পনা') || lower.includes('laptop') || lower.includes('ল্যাপটপ') || lower.includes('for my') || lower.includes('for a') || lower.includes('জন্য') || /\d+/.test(lower)) &&
+    !lower.includes('%') && !lower.includes('percent') && !lower.includes('পার্সেন্ট') && !lower.includes('round-up') && !lower.includes('round up')
   ) {
     return { type: 'create_savings_goal' };
   }
@@ -517,6 +552,21 @@ export function classifyIntent(text) {
     return { type: 'transactions' };
   }
 
+  // 24b. Group Bill Creation Intent (Natural Language)
+  if (
+    (lower.includes('create') || lower.includes('make') || lower.includes('তৈরি') || lower.includes('বানাও') || lower.includes('খোলো') || lower.includes('করো')) &&
+    (lower.includes('group bill') || lower.includes('গ্রুপ বিল') || lower.includes('bill split') || lower.includes('বিল স্প্লিট') || lower.includes('split bill') || lower.includes('group split'))
+  ) {
+    return { type: 'create_group_bill' };
+  }
+  if (
+    (lower.includes('group bill') || lower.includes('গ্রুপ বিল') || lower.includes('bill split') || lower.includes('বিল স্প্লিট')) &&
+    (/\d+/.test(lower) || lower.includes('with') || lower.includes('সাথে')) &&
+    !lower.includes('status') && !lower.includes('who owes') && !lower.includes('বাকি')
+  ) {
+    return { type: 'create_group_bill' };
+  }
+
   // 25. Group Bill / Split Bill Query
   if (
     lower.includes('group bill') ||
@@ -542,7 +592,17 @@ export function classifyIntent(text) {
     return { type: 'requests_list' };
   }
 
-  // 27. Guardian Management Queries & Approvals
+  // 26b. Guardian Natural Language Approval Intent
+  if (
+    (lower.includes('approve') || lower.includes('অনুমোদন') || lower.includes('অ্যাপ্রুভ')) &&
+    (lower.includes('child') || lower.includes('son') || lower.includes('daughter') || lower.includes('ward') ||
+     lower.includes('সন্তান') || lower.includes('ছেলে') || lower.includes('মেয়ে') || lower.includes('পেমেন্ট') ||
+     lower.includes('লেনদেন') || lower.includes('pending') || lower.includes('পেন্ডিং') || lower.includes('payment'))
+  ) {
+    return { type: 'guardian_approve' };
+  }
+
+  // 27. Guardian Management Queries & Status
   if (
     lower.includes('my children') ||
     lower.includes('child permissions') ||
@@ -659,40 +719,61 @@ export function classifyIntent(text) {
     return { type: 'scheduled' };
   }
 
-  // 36. Immediate Financial Transaction Intents
-  if (
-    lower.startsWith('send ') ||
-    lower.startsWith('pay ') ||
-    lower.startsWith('recharge ') ||
-    lower.startsWith('cash out') ||
-    lower.startsWith('cash in') ||
-    lower.startsWith('add ') ||
-    lower.startsWith('add money') ||
-    lower.startsWith('withdraw') ||
-    lower.includes('পাঠাও') ||
-    lower.includes('দাও') ||
-    lower.includes('বিল দাও') ||
-    lower.includes('রিচার্জ') ||
-    lower.includes('ক্যাশ আউট') ||
-    lower.includes('ক্যাশ ইন') ||
-    lower.includes('টাকা যোগ')
-  ) {
-    return { type: 'immediate' };
-  }
-
-  // 37. Knowledge & Help Queries (RAG)
+  // 36. Knowledge & Help Queries (RAG)
   if (
     lower.includes('difference between') ||
     lower.includes('পার্থক্য কী') ||
     lower.includes('how does') ||
     lower.includes('ফি কত') ||
-    lower.includes('charge') ||
+    (/\bcharge\b/i.test(lower) && !lower.includes('recharge') && !lower.includes('রিচার্জ')) ||
     lower.includes('কীভাবে কাজ করে') ||
     lower.includes('কিভাবে কাজ করে') ||
     lower.includes('help') ||
     lower.includes('সাহায্য')
   ) {
     return { type: 'knowledge' };
+  }
+
+  // 37. Immediate Financial Transaction Intents (Send, Cash Out, Bill Pay, Recharge, Add Money in Bangla, Banglish & English)
+  if (
+    lower.startsWith('send ') ||
+    lower.startsWith('pay ') ||
+    lower.startsWith('recharge ') ||
+    lower.includes('cash out') ||
+    lower.includes('cashout') ||
+    lower.includes('cash in') ||
+    lower.startsWith('add ') ||
+    lower.includes('add money') ||
+    lower.includes('withdraw') ||
+    lower.includes('send koro') ||
+    lower.includes('send kor') ||
+    lower.includes('send money') ||
+    lower.includes('pathao') ||
+    lower.includes('pathate') ||
+    lower.includes('pathano') ||
+    lower.includes('পাঠাও') ||
+    lower.includes('পাঠাতে') ||
+    lower.includes('পাঠানো') ||
+    lower.includes('বিল দাও') ||
+    lower.includes('বিল পরিশোধ') ||
+    lower.includes('রিচার্জ') ||
+    lower.includes('ক্যাশ আউট') ||
+    lower.includes('ক্যাশআউট') ||
+    lower.includes('উত্তোলন') ||
+    lower.includes('ক্যাশ ইন') ||
+    lower.includes('টাকা যোগ') ||
+    lower.includes('desco') ||
+    lower.includes('dpdc') ||
+    lower.includes('wasa') ||
+    lower.includes('titas') ||
+    lower.includes('nesco') ||
+    ((lower.includes('bill') || lower.includes('বিল') || lower.includes('বিদ্যুৎ') || lower.includes('পানি') || lower.includes('গ্যাস') || lower.includes('electricity')) &&
+      (lower.includes('pay') || lower.includes('দাও') || lower.includes('পরিশোধ') || lower.includes('দেওয়া') || /\d+/.test(lower))) ||
+    ((lower.includes('dao') || lower.includes('দাও')) &&
+      (lower.includes('taka') || lower.includes('টাকা') || lower.includes('friend') || lower.includes('ke') || lower.includes('কে') || /\d+/.test(lower))) ||
+    (lower.includes('send') && (/\d+/.test(lower) || lower.includes('rahim') || lower.includes('to')))
+  ) {
+    return { type: 'immediate' };
   }
 
   return { type: 'query' };
@@ -758,34 +839,96 @@ function getOperatorFromPhone(phone) {
 /**
  * Extract recipient name or phone from natural language text
  */
-async function resolveRecipient(text, senderUserId) {
+export async function resolveRecipient(text, senderUserId) {
+  if (!text) return null;
+
   // 1. Check for 11-digit phone number
   const phoneMatch = text.match(/01[3-9]\d{8}/);
   if (phoneMatch) {
-    const user = await User.findOne({ phone: phoneMatch[0], status: 'active' });
+    const cleanPhone = phoneMatch[0];
+    const user = await User.findOne({ phone: cleanPhone, status: 'active' });
     return {
-      phone: phoneMatch[0],
-      name: user?.name || phoneMatch[0],
+      phone: cleanPhone,
+      name: user ? user.name : cleanPhone,
       isKnown: Boolean(user),
+      user: user || null,
     };
   }
 
-  // 2. Check for mentioned name against registered Users or Contacts
-  const words = text
-    .replace(/[,\.?!;]/g, ' ')
-    .split(/\s+/)
-    .filter((w) => w.length >= 3);
+  // 2. Extract potential recipient candidates from text:
+  // e.g. "to Rahim", "প্রাপক রহিম"
+  const toMatch = text.match(/\b(?:to|প্রাপক)\s+([A-Za-z\u0980-\u09FF]{2,})/i);
+  let explicitCandidate = null;
+  if (toMatch) {
+    const word = toMatch[1].trim();
+    if (!['send', 'taka', 'money', 'bdt', 'tk', 'pay', 'cash', 'please', 'account', 'wallet', 'save', 'bill'].includes(word.toLowerCase())) {
+      explicitCandidate = word;
+    }
+  }
 
-  for (const word of words) {
-    const lowerWord = word.toLowerCase();
-    // Skip command keywords
-    if (['send', 'taka', 'money', 'bdt', 'tk', 'pay', 'cash', 'please', 'পাঠাও', 'টাকা', 'দাও'].includes(lowerWord)) {
+  // Next, check "<Name> ke" or "<Name>ke" or "<Name>কে" or "<Name>-কে" or "<Name> er" or "<Name>রে"
+  const keMatch = text.match(/\b([A-Za-z\u0980-\u09FF]{2,})(?:\s*-\s*|\s+)?(?:ke|কে|re|রে|er|এর)\b/i);
+  if (keMatch) {
+    const word = keMatch[1].trim();
+    if (!['send', 'taka', 'money', 'bdt', 'tk', 'pay', 'cash', 'amar', 'আমার', 'koto', 'kot', 'bill', 'save', 'koro', 'করো'].includes(word.toLowerCase())) {
+      explicitCandidate = explicitCandidate || word;
+    }
+  }
+
+  // Check all words against registered Users in DB
+  const rawWords = text
+    .replace(/[,\.?!;:()]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length >= 2);
+
+  const commandWords = [
+    'send', 'sent', 'pathao', 'pathate', 'pathano', 'taka', 'tk', 'money', 'bdt', 'pay', 'cash',
+    'out', 'in', 'please', 'wallet', 'account', 'bill', 'recharge', 'transfer', 'koro', 'করো',
+    'পাঠাও', 'পাঠাতে', 'পাঠানো', 'টাকা', 'দাও', 'dao', 'amar', 'আমার', 'friend', 'বন্ধু', 'need',
+    'want', 'chai', 'can', 'you', 'to', 'from', 'for', 'with', 'সাথে', 'এবং', 'and', 'er', 'এর',
+    'ke', 'কে', 'e', 'এ', 'te', 'তে'
+  ];
+
+  for (const rawWord of rawWords) {
+    const cleanWord = rawWord.replace(/(?:-?ke|-?কে|-?re|-?রে|-?te|-?তে|-?er|-?এর|-?e|-?এ)$/i, '');
+    const lowerClean = cleanWord.toLowerCase();
+
+    if (commandWords.includes(lowerClean) || cleanWord.length < 2) {
       continue;
     }
 
+    // Try exact name match
+    let matchedUser = await User.findOne({
+      _id: { $ne: senderUserId },
+      name: { $regex: new RegExp(`^${cleanWord}$`, 'i') },
+      status: 'active',
+    });
+
+    // Try partial name match if no exact
+    if (!matchedUser) {
+      matchedUser = await User.findOne({
+        _id: { $ne: senderUserId },
+        name: { $regex: new RegExp(`\\b${cleanWord}\\b`, 'i') },
+        status: 'active',
+      });
+    }
+
+    if (matchedUser) {
+      return {
+        phone: matchedUser.phone,
+        name: matchedUser.name,
+        isKnown: true,
+        user: matchedUser,
+      };
+    }
+  }
+
+  // If candidate was identified (e.g. "friend", "UnknownPerson") but not found in DB
+  if (explicitCandidate) {
+    const cleanCand = explicitCandidate.replace(/(?:-?ke|-?কে|-?re|-?রে|-?te|-?তে|-?er|-?এর|-?e|-?এ)$/i, '');
     const matchedUser = await User.findOne({
       _id: { $ne: senderUserId },
-      name: { $regex: new RegExp(word, 'i') },
+      name: { $regex: new RegExp(cleanCand, 'i') },
       status: 'active',
     });
 
@@ -794,23 +937,16 @@ async function resolveRecipient(text, senderUserId) {
         phone: matchedUser.phone,
         name: matchedUser.name,
         isKnown: true,
+        user: matchedUser,
       };
     }
-  }
 
-  // 3. Check for mentioned recipient name after "to" or "প্রাপক"
-  const toMatch = text.match(/\b(?:to|প্রাপক)\s+([A-Za-z\u0980-\u09FF]{2,})/i);
-  if (toMatch) {
-    const candidate = toMatch[1].trim();
-    const lowerCandidate = candidate.toLowerCase();
-    const commandWords = ['send', 'taka', 'money', 'bdt', 'tk', 'pay', 'cash', 'please', 'account', 'wallet', 'save'];
-    if (!commandWords.includes(lowerCandidate)) {
-      return {
-        phone: null,
-        name: candidate,
-        isKnown: false,
-      };
-    }
+    return {
+      phone: null,
+      name: explicitCandidate,
+      isKnown: false,
+      user: null,
+    };
   }
 
   return null;
@@ -871,6 +1007,10 @@ export function detectConflicts(text) {
  */
 export function splitMultiIntentClauses(text) {
   if (!text) return [text];
+  // Do NOT split comparison or difference questions
+  if (text.toLowerCase().includes('difference between') || text.includes('পার্থক্য')) {
+    return [text];
+  }
   // Do NOT split companion reminder phrases like "and remind me" or "এবং মনে করিয়ে দিও"
   if (/and\s+(?:remind\s+me|মনে\s+করিয়ে\s+দিও)/i.test(text)) {
     return [text];
@@ -1003,6 +1143,15 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
   }
 
   // 1e. Ambiguous Commands (require clarification)
+  if (intent.type === 'irrelevant') {
+    return {
+      reply: language === 'bn'
+        ? 'আমি শুধুমাত্র আপনার উপায়ের (UPAY) আর্থিক লেনদেন, ব্যালেন্স, বিল পরিশোধ, সঞ্চয় এবং অভিভাবক সংক্রান্ত কার্যক্রমে সহায়তা করতে পারি। এই অনুরোধটি আর্থিক সেবার আওতাভুক্ত নয়।'
+        : 'I am your UPAY Financial Copilot and can only assist with financial transactions, account balance, bill payments, savings, and Guardian controls. I cannot assist with non-financial topics.',
+      pendingAction: null,
+    };
+  }
+
   if (intent.type === 'ambiguous_change_savings') {
     return {
       reply: language === 'bn'
@@ -1456,10 +1605,32 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
     };
   }
 
-  // 16. Mode C: Savings Goal Creation ("Create a savings goal of 10,000 taka in 3 months")
+  // 16. Mode C: Savings Goal / Plan Creation
   if (intent.type === 'create_savings_goal') {
     const explicitPoisha = extractExplicitAmountPoisha(messageText);
-    if (explicitPoisha !== null && explicitPoisha <= 0) {
+
+    // Extract purpose keyword (e.g. laptop, car, emergency, wedding)
+    let purposeKeyword = 'সঞ্চয়';
+    let purposeEn = 'Savings';
+    const purposeMatch = messageText.match(/(?:for\s+my\s+|for\s+a\s+|for\s+|জন্য\s+)([\p{L}]+)/iu);
+    if (purposeMatch && !['a', 'an', 'the', 'my', 'some', 'new'].includes(purposeMatch[1].toLowerCase())) {
+      purposeKeyword = purposeMatch[1];
+      purposeEn = purposeMatch[1];
+    } else if (messageText.toLowerCase().includes('laptop') || messageText.includes('ল্যাপটপ')) {
+      purposeKeyword = 'ল্যাপটপ';
+      purposeEn = 'Laptop';
+    }
+
+    if (explicitPoisha === null) {
+      return {
+        reply: language === 'bn'
+          ? `আপনার '${purposeKeyword}'-এর জন্য সঞ্চয় লক্ষ্যের পরিমাণ কত টাকা নির্ধারণ করতে চান? (যেমন: ২০,০০০ টাকা)`
+          : `What target amount would you like to set for your '${purposeEn}' savings goal? (e.g. 20,000 taka)`,
+        pendingAction: null,
+      };
+    }
+
+    if (explicitPoisha <= 0) {
       return {
         reply: language === 'bn'
           ? '⚠️ সঞ্চয় লক্ষ্যের পরিমাণ ০ বা ঋণাত্মক হতে পারে না। অনুগ্রহ করে একটি সঠিক পরিমাণ উল্লেখ করুন (যেমন: ১০,০০০ টাকা)।'
@@ -1468,32 +1639,47 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
       };
     }
 
-    const targetPoisha = explicitPoisha || 1000000; // default 10,000 BDT
+    const targetPoisha = explicitPoisha;
     const durationMatch = messageText.match(/(\d+)\s*(?:month|months|মাস)/i);
     const durationMonths = durationMatch ? parseInt(durationMatch[1], 10) : 3;
 
+    let frequency = 'monthly';
+    if (messageText.toLowerCase().includes('week') || messageText.includes('সপ্তাহ')) {
+      frequency = 'weekly';
+    } else if (messageText.toLowerCase().includes('day') || messageText.includes('প্রতিদিন')) {
+      frequency = 'daily';
+    }
+
     const pace = calculateGoalPace({ targetPoisha, durationMonths, language });
+    const planTitle = language === 'bn' ? `${purposeKeyword} সঞ্চয় লক্ষ্য` : `${purposeEn} Savings Plan`;
 
     const plan = await SavingsPlan.create({
       userId,
       planType: 'savings',
-      title: `সঞ্চয় লক্ষ্য (Goal: ৳${pace.targetBdt})`,
+      title: planTitle,
       targetAmountPoisha: targetPoisha,
       currentAmountPoisha: 0,
       durationMonths,
+      frequency,
       status: 'active',
     });
 
     // Update FinancialMemory default target
     const memory = await getOrCreateFinancialMemory(userId);
     memory.microSavings.targetPlanId = plan._id;
+    memory.financialGoals = memory.financialGoals.filter((g) => g.keyword !== purposeEn.toLowerCase());
+    memory.financialGoals.push({
+      keyword: purposeEn.toLowerCase(),
+      title: planTitle,
+      targetPoisha,
+      savingsPlanId: plan._id,
+      notes: `Created via AI Copilot`,
+    });
     await memory.save();
 
     const reply = language === 'bn'
-      ? `🎯 নতুন সঞ্চয় লক্ষ্য তৈরি করা হয়েছে!\n${pace.recommendation}\n` +
-        `লক্ষ্যটি সক্রিয় রয়েছে। আপনি 'Show my savings progress' বলে অগ্রগতি দেখতে পারেন।`
-      : `🎯 New Savings Goal Created!\n${pace.recommendation}\n` +
-        `Goal is active. You can track it anytime by asking 'Show my savings progress'.`;
+      ? `🎯 নতুন সঞ্চয় পরিকল্পনা '${planTitle}' সফলভাবে তৈরি করা হয়েছে!\n• লক্ষ্য: ${formatBdt(targetPoisha)}\n• মেয়াদ: ${durationMonths} মাস\n${pace.recommendation}\nলক্ষ্যটি সক্রিয় রয়েছে। আপনি 'Show my savings progress' বলে অগ্রগতি দেখতে পারেন।`
+      : `🎯 New Savings Plan '${planTitle}' created successfully!\n• Target: ${formatBdt(targetPoisha)}\n• Duration: ${durationMonths} months\n${pace.recommendation}\nPlan is active. You can track it anytime by asking 'Show my savings progress'.`;
 
     return {
       reply,
@@ -1913,11 +2099,311 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
   // LAYER B: GUARDIAN RISK ENGINE & WRITE ACTIONS
   // ==========================================
 
-  // 29. Send Money (with Missing Parameter Check & Guardian Risk Analysis)
-  if (
-    intent.type === 'immediate' &&
-    (messageText.toLowerCase().startsWith('send') || messageText.includes('পাঠাও') || messageText.includes('পাঠাতে চাই'))
-  ) {
+  // 29a. Group Bill Creation (Natural Language)
+  if (intent.type === 'create_group_bill') {
+    if (rawExplicitAmount === null) {
+      return {
+        reply: language === 'bn'
+          ? 'গ্রুপ বিলের মোট পরিমাণ কত টাকা? অনুগ্রহ করে মোট টাকার পরিমাণ উল্লেখ করুন (যেমন: ২০০০ টাকা)।'
+          : 'What is the total amount for the group bill? Please specify the total amount (e.g. 2000 taka).',
+        pendingAction: null,
+      };
+    }
+
+    if (rawExplicitAmount <= 0) {
+      return {
+        reply: language === 'bn'
+          ? '⚠️ গ্রুপ বিলের মোট পরিমাণ ০ বা ঋণাত্মক হতে পারে না।'
+          : '⚠️ Group bill amount must be greater than zero.',
+        pendingAction: null,
+      };
+    }
+
+    // Check for vague statements like "with 3 people" without names/phones
+    const isVaguePeople = /(?:with\s+\d+\s+people|with\s+friends|with\s+\d+\s+friends|\d+\s*জনের সাথে|বন্ধুদের সাথে)/i.test(messageText);
+
+    // Extract description
+    let description = language === 'bn' ? 'গ্রুপ বিল' : 'Group Bill';
+    const forMatch = messageText.match(/(?:for|বাবদ|উদ্দেশ্যে)\s+([A-Za-z\u0980-\u09FF\s]+?)(?:\s+(?:with|সাথে)|\s*$)/i);
+    if (forMatch && forMatch[1].trim()) {
+      description = forMatch[1].trim();
+    } else if (messageText.toLowerCase().includes('dinner') || messageText.includes('ডিনার')) {
+      description = language === 'bn' ? 'ডিনার' : 'Dinner';
+    } else if (messageText.toLowerCase().includes('lunch') || messageText.includes('লাঞ্চ')) {
+      description = language === 'bn' ? 'লাঞ্চ' : 'Lunch';
+    }
+
+    // Extract participant names/numbers
+    let rawCandidates = [];
+    const withMatch = messageText.match(/(?:with|সাথে)\s+([^.]+)/i);
+    if (withMatch) {
+      const segment = withMatch[1];
+      const parts = segment.replace(/\b(?:and|এবং|o|ও)\b/gi, ',').split(',');
+      for (const p of parts) {
+        const cleaned = p.trim().replace(/[,\.?!;:()]/g, '');
+        if (
+          cleaned.length >= 2 &&
+          !['people', 'friends', 'jon', 'members', 'মেম্বার', 'জন'].includes(cleaned.toLowerCase()) &&
+          !/^\d+\s*(?:people|friends|jon|জন)$/i.test(cleaned)
+        ) {
+          rawCandidates.push(cleaned);
+        }
+      }
+    }
+
+    // Also collect any phones from the text
+    const allPhones = messageText.match(/01[3-9]\d{8}/g) || [];
+    for (const ph of allPhones) {
+      if (!rawCandidates.includes(ph)) rawCandidates.push(ph);
+    }
+
+    if (rawCandidates.length === 0 || (isVaguePeople && allPhones.length === 0)) {
+      return {
+        reply: language === 'bn'
+          ? 'গ্রুপ বিলে কারা অন্তর্ভুক্ত আছেন? অনুগ্রহ করে অংশগ্রহণকারীদের নাম বা মোবাইল নম্বর উল্লেখ করুন (যেমন: রহিম, করিম ও নাবিলা)।'
+          : 'Who are the participants in this group bill? Please specify their names or phone numbers (e.g. Rahim, Karim, and Nabila).',
+        pendingAction: null,
+      };
+    }
+
+    // Resolve candidates to real users
+    const resolvedParticipants = [];
+    for (const cand of rawCandidates) {
+      const isPhone = /^01[3-9]\d{8}$/.test(cand);
+      let matchedUser = null;
+      if (isPhone) {
+        matchedUser = await User.findOne({ phone: cand, status: 'active' });
+        resolvedParticipants.push({
+          phone: cand,
+          name: matchedUser ? matchedUser.name : cand,
+          user: matchedUser || null,
+        });
+      } else {
+        const cleanName = cand.replace(/(?:-?ke|-?কে|-?re|-?রে|-?er|-?এর|-?e|-?এ|-?te|-?তে)$/i, '').trim();
+        matchedUser = await User.findOne({
+          _id: { $ne: userId },
+          name: { $regex: new RegExp(`^${cleanName}$`, 'i') },
+          status: 'active',
+        });
+        if (!matchedUser) {
+          matchedUser = await User.findOne({
+            _id: { $ne: userId },
+            name: { $regex: new RegExp(`\\b${cleanName}\\b`, 'i') },
+            status: 'active',
+          });
+        }
+
+        if (!matchedUser) {
+          return {
+            reply: language === 'bn'
+              ? `'${cleanName}'-এর অ্যাকাউন্ট খুঁজে পাওয়া যায়নি। অনুগ্রহ করে '${cleanName}'-এর ১১ সংখ্যার মোবাইল নম্বর দিন।`
+              : `Could not find an account for '${cleanName}'. Please provide their 11-digit phone number.`,
+            pendingAction: null,
+          };
+        }
+
+        resolvedParticipants.push({
+          phone: matchedUser.phone,
+          name: matchedUser.name,
+          user: matchedUser,
+        });
+      }
+    }
+
+    // Compute equal split among (creator + resolvedParticipants)
+    const totalPeople = resolvedParticipants.length + 1; // creator included
+    const perPersonPoisha = Math.floor(amountPoisha / totalPeople);
+
+    const participantList = resolvedParticipants.map((p) => ({
+      phone: p.phone,
+      name: p.name,
+      amountPoisha: perPersonPoisha,
+    }));
+
+    const totalRequestedPoisha = perPersonPoisha * participantList.length;
+
+    const actionId = `grp-bill-${crypto.randomUUID()}`;
+    const pendingArgs = {
+      totalAmountPoisha: totalRequestedPoisha,
+      splitType: 'equal',
+      participants: participantList,
+      description,
+      originalBillAmountPoisha: amountPoisha,
+    };
+    const actionHash = computeCanonicalActionHash({
+      actionId,
+      actionType: 'create_group_bill',
+      args: pendingArgs,
+    });
+
+    const breakdownLinesBn = participantList.map((p) => `• ${p.name} (${p.phone}): ${formatBdt(p.amountPoisha)}`).join('\n');
+    const breakdownLinesEn = participantList.map((p) => `• ${p.name} (${p.phone}): ${formatBdt(p.amountPoisha)}`).join('\n');
+
+    const pending = await PendingAction.create({
+      actionId,
+      actionHash,
+      userId,
+      tool: 'create_group_bill',
+      args: pendingArgs,
+      preview: {
+        actionType: 'create_group_bill',
+        title: language === 'bn' ? `গ্রুপ বিল বিভাজন নিশ্চিতকরণ` : `Confirm Group Bill Split`,
+        amountPoisha,
+        feePoisha: 0,
+        totalPoisha: amountPoisha,
+        recipientLabel: `${participantList.map((p) => p.name).join(', ')} (${totalPeople} জন)`,
+        details: {
+          totalBill: formatBdt(amountPoisha),
+          perPerson: formatBdt(perPersonPoisha),
+          creatorShare: formatBdt(perPersonPoisha),
+          description,
+        },
+      },
+      requiredTier: 'T2',
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+    });
+
+    return {
+      reply: language === 'bn'
+        ? `📋 '${description}' বাবদ ${formatBdt(amountPoisha)} বিলের হিসাব প্রস্তুত করা হয়েছে:\n` +
+          `• মোট ব্যক্তি: ${totalPeople} জন (আপনি সহ)\n` +
+          `• জনপ্রতি ভাগ: ${formatBdt(perPersonPoisha)}\n` +
+          `• অনুরোধ পাঠানো হবে:\n${breakdownLinesBn}\n\n` +
+          `গ্রুপ বিল তৈরি করে অনুরোধ পাঠাতে নিচের কার্ডে পিন দিন।`
+        : `📋 Bill split prepared for '${description}' (${formatBdt(amountPoisha)}):\n` +
+          `• Total people: ${totalPeople} (including you)\n` +
+          `• Share per person: ${formatBdt(perPersonPoisha)}\n` +
+          `• Requests to send:\n${breakdownLinesEn}\n\n` +
+          `To create this group bill and send requests, please confirm below with your PIN.`,
+      pendingAction: pending,
+    };
+  }
+
+  // 29b. Guardian Natural Language Approval
+  if (intent.type === 'guardian_approve') {
+    const pendingApprovals = await getPendingApprovals(userId);
+
+    if (pendingApprovals.length === 0) {
+      return {
+        reply: language === 'bn'
+          ? 'আপনার কোনো সন্তানের বা ওয়ার্ডের পেন্ডিং লেনদেন অনুমোদনের অপেক্ষায় নেই।'
+          : 'You have no pending child transactions awaiting guardian approval.',
+        pendingAction: null,
+      };
+    }
+
+    let targetApproval = null;
+    if (rawExplicitAmount !== null) {
+      const targetPoisha = rawExplicitAmount;
+      targetApproval = pendingApprovals.find(
+        (a) => a.amountPoisha === targetPoisha || Math.abs(a.amountPoisha - targetPoisha) < 100
+      );
+      if (!targetApproval) {
+        const displayAmt = Math.floor(rawExplicitAmount / 100);
+        return {
+          reply: language === 'bn'
+            ? `৳${displayAmt} পরিমাণের কোনো পেন্ডিং লেনদেন পাওয়া যায়নি। তবে ${formatBdt(pendingApprovals[0].amountPoisha)}-এর একটি অপেক্ষমান লেনদেন রয়েছে (${pendingApprovals[0].sender.name})।`
+            : `No pending transaction found for ৳${displayAmt}. However, there is a pending transaction of ${formatBdt(pendingApprovals[0].amountPoisha)} from ${pendingApprovals[0].sender.name}.`,
+          pendingAction: null,
+        };
+      }
+    } else {
+      targetApproval = pendingApprovals[0];
+    }
+
+    const actionId = `guard-appr-${crypto.randomUUID()}`;
+    const pendingArgs = {
+      txnId: targetApproval.id,
+      decision: 'approve',
+      amountPoisha: targetApproval.amountPoisha,
+      childName: targetApproval.sender.name,
+      recipientName: targetApproval.recipient.name,
+    };
+    const actionHash = computeCanonicalActionHash({
+      actionId,
+      actionType: 'guardian_decision',
+      args: pendingArgs,
+    });
+
+    const pending = await PendingAction.create({
+      actionId,
+      actionHash,
+      userId,
+      tool: 'guardian_decision',
+      args: pendingArgs,
+      preview: {
+        actionType: 'guardian_decision',
+        title: language === 'bn' ? 'সন্তানের লেনদেন অনুমোদন নিশ্চিতকরণ' : 'Confirm Child Payment Approval',
+        amountPoisha: targetApproval.amountPoisha,
+        feePoisha: targetApproval.feePoisha || 0,
+        totalPoisha: targetApproval.totalPoisha || targetApproval.amountPoisha,
+        recipientLabel: `${targetApproval.sender.name} ➔ ${targetApproval.recipient.name}`,
+        details: {
+          child: targetApproval.sender.name,
+          recipient: targetApproval.recipient.name,
+          reason: targetApproval.reason,
+        },
+      },
+      requiredTier: 'T2',
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+    });
+
+    return {
+      reply: language === 'bn'
+        ? `সন্তান ${targetApproval.sender.name}-এর ${formatBdt(targetApproval.amountPoisha)} লেনদেন (${targetApproval.recipient.name}-কে) অনুমোদন করতে নিচের কার্ডে আপনার পিন দিন।`
+        : `To approve ${targetApproval.sender.name}'s transaction of ${formatBdt(targetApproval.amountPoisha)} to ${targetApproval.recipient.name}, please confirm below with your PIN.`,
+      pendingAction: pending,
+    };
+  }
+
+  // Determine immediate transaction intent type
+  const lowerMsg = messageText.toLowerCase();
+
+  const isCashOut =
+    intent.type === 'cash_out' ||
+    (intent.type === 'immediate' &&
+      (lowerMsg.includes('cash out') ||
+        lowerMsg.includes('cashout') ||
+        lowerMsg.includes('withdraw') ||
+        messageText.includes('ক্যাশ আউট') ||
+        messageText.includes('ক্যাশআউট') ||
+        messageText.includes('উত্তোলন')));
+
+  const isAddMoney =
+    intent.type === 'add_money' ||
+    (intent.type === 'immediate' &&
+      (lowerMsg.includes('cash in') ||
+        lowerMsg.includes('add money') ||
+        lowerMsg.startsWith('add ') ||
+        messageText.includes('ক্যাশ ইন') ||
+        messageText.includes('টাকা যোগ')));
+
+  const isMobileRecharge =
+    intent.type === 'mobile_recharge' ||
+    (intent.type === 'immediate' &&
+      (lowerMsg.includes('recharge') || messageText.includes('রিচার্জ')));
+
+  const isPayBill =
+    intent.type === 'pay_bill' ||
+    (intent.type === 'immediate' &&
+      (lowerMsg.includes('desco') ||
+        lowerMsg.includes('dpdc') ||
+        lowerMsg.includes('wasa') ||
+        lowerMsg.includes('titas') ||
+        lowerMsg.includes('nesco') ||
+        lowerMsg.includes('bill') ||
+        messageText.includes('বিল') ||
+        messageText.includes('বিদ্যুৎ') ||
+        messageText.includes('পানি') ||
+        messageText.includes('গ্যাস') ||
+        lowerMsg.includes('electricity')));
+
+  const isSendMoney =
+    intent.type === 'send_money' ||
+    (intent.type === 'immediate' && !isCashOut && !isAddMoney && !isMobileRecharge && !isPayBill);
+
+  // 29c. Send Money (with Missing Parameter Check, Recipient Validation & Guardian Risk Analysis)
+  if (isSendMoney) {
     // Negative or Zero Amount Check
     if (rawExplicitAmount !== null && rawExplicitAmount <= 0) {
       return {
@@ -1935,7 +2421,7 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
     if (!recipient) {
       return {
         reply: language === 'bn'
-          ? 'কাকে টাকা পাঠাতে চান? অনুগ্রহ করে প্রাপকের মোবাইল নম্বর বা নাম উল্লেখ করুন (যেমন: 017XXXXXXXX বা করিম)।'
+          ? 'কাকে টাকা পাঠাতে চান? অনুগ্রহ করে প্রাপকের মোবাইল নম্বর বা নাম উল্লেখ করুন (যেমন: 017XXXXXXXX বা রহিম)।'
           : 'Who would you like to send money to? Please specify the recipient phone number or name.',
         pendingAction: null,
       };
@@ -1951,12 +2437,12 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
       };
     }
 
-    // Missing Recipient Phone Check
-    if (!recipient.phone) {
+    // If candidate found but unknown/unregistered
+    if (!recipient.phone || !recipient.isKnown) {
       return {
         reply: language === 'bn'
-          ? `${recipient.name}-এর ফোন নম্বর পাওয়া যায়নি। অনুগ্রহ করে ১১ ডিজিটের ফোন নম্বর উল্লেখ করুন (যেমন: 017XXXXXXXX)।`
-          : `I couldn't find a phone number for ${recipient.name}. Please provide their 11-digit phone number.`,
+          ? 'এই নম্বর/অ্যাকাউন্টটি পাওয়া যায়নি, তাই transfer করা সম্ভব হচ্ছে না।'
+          : `This recipient account (${recipient.name || recipient.phone}) was not found, so the transfer cannot be completed.`,
         pendingAction: null,
       };
     }
@@ -1976,8 +2462,8 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
     if (!recipientUser) {
       return {
         reply: language === 'bn'
-          ? `⚠️ ${recipient.phone} নম্বরে কোনো সক্রিয় অ্যাকাউন্ট পাওয়া যায়নি। অনুগ্রহ করে সঠিক গ্রাহক নম্বর যাচাই করুন।`
-          : `⚠️ No active account found for phone number ${recipient.phone}. Please verify the recipient number.`,
+          ? 'এই নম্বর/অ্যাকাউন্টটি পাওয়া যায়নি, তাই transfer করা সম্ভব হচ্ছে না।'
+          : `This recipient account (${recipient.phone}) was not found, so the transfer cannot be completed.`,
         pendingAction: null,
       };
     }
@@ -2001,8 +2487,8 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
     if (balancePoisha < totalPoisha) {
       return {
         reply: language === 'bn'
-          ? `অপর্যাপ্ত ব্যালেন্স। আপনার বর্তমান ব্যালেন্স ${formatBdt(balancePoisha)}, প্রয়োজন ${formatBdt(totalPoisha)} (ফি সহ)।`
-          : `Insufficient balance. Available: ${formatBdt(balancePoisha)}, Required: ${formatBdt(totalPoisha)} (including fee).`,
+          ? `Transfer করা সম্ভব হচ্ছে না। আপনার বর্তমান balance এই transaction-এর জন্য যথেষ্ট নয়। (বর্তমান ব্যালেন্স: ${formatBdt(balancePoisha)}, প্রয়োজন: ${formatBdt(totalPoisha)})`
+          : `Transfer cannot be completed. Your current balance is insufficient for this transaction. (Available: ${formatBdt(balancePoisha)}, Required: ${formatBdt(totalPoisha)})`,
         pendingAction: null,
       };
     }
@@ -2035,6 +2521,7 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
     const actionId = `send-act-${crypto.randomUUID()}`;
     const pendingArgs = {
       recipientPhone: recipient.phone,
+      recipientName: recipient.name,
       amountPoisha,
       feePoisha,
       totalPoisha,
@@ -2084,18 +2571,24 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
 
     return {
       reply: language === 'bn'
-        ? `${recipient.name} (${recipient.phone})-কে ${formatBdt(amountPoisha)} পাঠাতে নিচের কার্ডে পিন দিয়ে নিশ্চিত করুন। (ফি: ${formatBdt(feePoisha)})${riskNotice}`
-        : `To send ${formatBdt(amountPoisha)} to ${recipient.name} (${recipient.phone}), please confirm below with your PIN. (Fee: ${formatBdt(feePoisha)})${riskNotice}`,
+        ? `${recipient.name}-এর অ্যাকাউন্ট পাওয়া গেছে। আপনি ${recipient.name}-কে (${recipient.phone}) ${formatBdt(amountPoisha)} পাঠাতে যাচ্ছেন। আপনি কি এগিয়ে যেতে চান? নিশ্চিত করতে নিচের কার্ডে পিন দিন। (ফি: ${formatBdt(feePoisha)})${riskNotice}`
+        : `I found ${recipient.name}'s account. You are about to send ${formatBdt(amountPoisha)} to ${recipient.name} (${recipient.phone}). Do you want to continue? Please confirm below with your PIN. (Fee: ${formatBdt(feePoisha)})${riskNotice}`,
       pendingAction: pending,
     };
   }
 
   // 30. Cash Out
-  if (
-    intent.type === 'immediate' &&
-    (messageText.toLowerCase().includes('cash out') || messageText.toLowerCase().includes('withdraw') || messageText.includes('ক্যাশ আউট') || messageText.includes('উত্তোলন'))
-  ) {
-    if (rawExplicitAmount !== null && rawExplicitAmount <= 0) {
+  if (isCashOut) {
+    if (rawExplicitAmount === null) {
+      return {
+        reply: language === 'bn'
+          ? 'কত টাকা ক্যাশ আউট করতে চান? অনুগ্রহ করে টাকার পরিমাণ উল্লেখ করুন (যেমন: ২০০০ টাকা)।'
+          : 'How much would you like to cash out? Please specify the amount (e.g. 2000 taka).',
+        pendingAction: null,
+      };
+    }
+
+    if (rawExplicitAmount <= 0) {
       return {
         reply: language === 'bn'
           ? '⚠️ ক্যাশ আউটের পরিমাণ ০ বা ঋণাত্মক হতে পারে না।'
@@ -2103,6 +2596,7 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
         pendingAction: null,
       };
     }
+
     if (amountPoisha > 2500000) {
       return {
         reply: language === 'bn'
@@ -2112,11 +2606,20 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
       };
     }
 
-    let agentUser = await User.findOne({ accountType: 'AGENT', status: 'active' });
+    let agentUser = null;
     const phoneMatch = messageText.match(/01[3-9]\d{8}/);
     if (phoneMatch) {
-      const specificAgent = await User.findOne({ phone: phoneMatch[0], accountType: 'AGENT', status: 'active' });
-      if (specificAgent) agentUser = specificAgent;
+      agentUser = await User.findOne({ phone: phoneMatch[0], accountType: 'AGENT', status: 'active' });
+      if (!agentUser) {
+        return {
+          reply: language === 'bn'
+            ? `এই নম্বরে (${phoneMatch[0]}) কোনো সক্রিয় এজেন্ট অ্যাকাউন্ট পাওয়া যায়নি, তাই ক্যাশ আউট করা সম্ভব নয়।`
+            : `No active agent account found for ${phoneMatch[0]}. Cash out cannot be completed.`,
+          pendingAction: null,
+        };
+      }
+    } else {
+      agentUser = await User.findOne({ accountType: 'AGENT', status: 'active' });
     }
 
     if (!agentUser) {
@@ -2132,14 +2635,14 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
     if (balancePoisha < totalPoisha) {
       return {
         reply: language === 'bn'
-          ? `অপর্যাপ্ত ব্যালেন্স। আপনার ব্যালেন্স ${formatBdt(balancePoisha)}, প্রয়োজন ${formatBdt(totalPoisha)} (ফি সহ)।`
-          : `Insufficient balance. Available: ${formatBdt(balancePoisha)}, Required: ${formatBdt(totalPoisha)} (including fee).`,
+          ? `ক্যাশ আউট করা সম্ভব হচ্ছে না। আপনার বর্তমান ব্যালেন্স ফি সহ এই লেনদেনের জন্য যথেষ্ট নয়। (বর্তমান ব্যালেন্স: ${formatBdt(balancePoisha)}, প্রয়োজন: ${formatBdt(totalPoisha)})`
+          : `Cash out cannot be completed due to insufficient balance including the 1.5% fee. (Available: ${formatBdt(balancePoisha)}, Required: ${formatBdt(totalPoisha)})`,
         pendingAction: null,
       };
     }
 
     const actionId = `cashout-${crypto.randomUUID()}`;
-    const pendingArgs = { agentPhone: agentUser.phone, amountPoisha };
+    const pendingArgs = { agentPhone: agentUser.phone, amountPoisha, feePoisha, totalPoisha };
     const actionHash = computeCanonicalActionHash({ actionId, actionType: 'cash_out', args: pendingArgs });
 
     const pending = await PendingAction.create({
@@ -2171,14 +2674,7 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
   }
 
   // 31. Add Money / Cash In
-  if (
-    intent.type === 'immediate' &&
-    (messageText.toLowerCase().includes('cash in') ||
-      messageText.toLowerCase().includes('add money') ||
-      messageText.toLowerCase().startsWith('add ') ||
-      messageText.includes('ক্যাশ ইন') ||
-      messageText.includes('টাকা যোগ'))
-  ) {
+  if (isAddMoney) {
     if (rawExplicitAmount !== null && rawExplicitAmount <= 0) {
       return {
         reply: language === 'bn'
@@ -2227,10 +2723,7 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
   }
 
   // 32. Mobile Recharge
-  if (
-    intent.type === 'immediate' &&
-    (messageText.toLowerCase().includes('recharge') || messageText.includes('রিচার্জ'))
-  ) {
+  if (isMobileRecharge) {
     if (rawExplicitAmount !== null && (rawExplicitAmount < 1000 || rawExplicitAmount > 100000)) {
       return {
         reply: language === 'bn'
@@ -2276,25 +2769,64 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
   }
 
   // 33. Bill Pay
-  if (
-    intent.type === 'immediate' &&
-    (messageText.toLowerCase().includes('bill') || messageText.includes('বিল') || messageText.includes('বিদ্যুৎ') || messageText.includes('পানি') || messageText.includes('গ্যাস') || messageText.includes('electricity') || messageText.includes('wasa'))
-  ) {
+  if (isPayBill) {
+    if (rawExplicitAmount === null) {
+      return {
+        reply: language === 'bn'
+          ? 'কত টাকা বিল পরিশোধ করতে চান? অনুগ্রহ করে টাকার পরিমাণ উল্লেখ করুন (যেমন: ১২০০ টাকা)।'
+          : 'What is the bill amount you would like to pay? Please specify the amount (e.g. 1200 taka).',
+        pendingAction: null,
+      };
+    }
+
+    if (rawExplicitAmount <= 0) {
+      return {
+        reply: language === 'bn'
+          ? '⚠️ বিল পরিশোধের পরিমাণ ০ বা ঋণাত্মক হতে পারে না।'
+          : '⚠️ Bill payment amount must be greater than zero.',
+        pendingAction: null,
+      };
+    }
+
     let billerId = 'DPDC';
     let billLabel = 'DPDC Electricity';
-    if (messageText.toLowerCase().includes('desco')) {
+    const lowerBill = messageText.toLowerCase();
+    if (lowerBill.includes('desco')) {
       billerId = 'DESCO';
       billLabel = 'DESCO Electricity';
-    } else if (messageText.toLowerCase().includes('wasa') || messageText.includes('পানি')) {
+    } else if (lowerBill.includes('wasa') || lowerBill.includes('পানি') || lowerBill.includes('water')) {
       billerId = 'WASA';
       billLabel = 'Dhaka WASA Water';
-    } else if (messageText.toLowerCase().includes('titas') || messageText.includes('গ্যাস') || messageText.includes('gas')) {
+    } else if (lowerBill.includes('titas') || lowerBill.includes('গ্যাস') || lowerBill.includes('gas')) {
       billerId = 'TITAS';
       billLabel = 'Titas Gas';
+    } else if (lowerBill.includes('nesco')) {
+      billerId = 'NESCO';
+      billLabel = 'NESCO Electricity';
+    } else if (lowerBill.includes('বিদ্যুৎ') || lowerBill.includes('electricity')) {
+      billerId = 'DPDC';
+      billLabel = 'DPDC Electricity';
+    }
+
+    let accountNo = '442109';
+    const accMatches = messageText.match(/\b\d{6,12}\b/g);
+    if (accMatches && accMatches.length > 0) {
+      const explicitAmtStr = String(Math.floor(amountPoisha / 100));
+      const nonAmtMatch = accMatches.find((m) => m !== explicitAmtStr);
+      if (nonAmtMatch) accountNo = nonAmtMatch;
+    }
+
+    if (balancePoisha < amountPoisha) {
+      return {
+        reply: language === 'bn'
+          ? `বিল পরিশোধ করা সম্ভব হচ্ছে না। আপনার বর্তমান ব্যালেন্স অপর্যাপ্ত। (বর্তমান ব্যালেন্স: ${formatBdt(balancePoisha)}, বিল: ${formatBdt(amountPoisha)})`
+          : `Bill payment cannot be completed due to insufficient balance. (Available: ${formatBdt(balancePoisha)}, Required: ${formatBdt(amountPoisha)})`,
+        pendingAction: null,
+      };
     }
 
     const actionId = `bill-act-${crypto.randomUUID()}`;
-    const pendingArgs = { billerId, accountNo: '442109', amountPoisha };
+    const pendingArgs = { billerId, accountNo, amountPoisha };
     const actionHash = computeCanonicalActionHash({ actionId, actionType: 'pay_bill', args: pendingArgs });
 
     const pending = await PendingAction.create({
@@ -2309,7 +2841,11 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
         amountPoisha,
         feePoisha: 0,
         totalPoisha: amountPoisha,
-        recipientLabel: billLabel,
+        recipientLabel: `${billLabel} (A/C: ${accountNo})`,
+        details: {
+          biller: billerId,
+          accountNumber: accountNo,
+        },
       },
       requiredTier: 'T2',
       expiresAt: new Date(Date.now() + 5 * 60 * 1000),
@@ -2317,8 +2853,8 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
 
     return {
       reply: language === 'bn'
-        ? `${billLabel}-এর ${formatBdt(amountPoisha)} বিল পরিশোধ করতে পিন দিয়ে নিশ্চিত করুন।`
-        : `To pay ${formatBdt(amountPoisha)} for ${billLabel}, please confirm with your PIN.`,
+        ? `${billLabel} (হিসাব নং ${accountNo})-এর ${formatBdt(amountPoisha)} বিল পরিশোধ করতে পিন দিয়ে নিশ্চিত করুন।`
+        : `To pay ${formatBdt(amountPoisha)} for ${billLabel} (A/C: ${accountNo}), please confirm with your PIN.`,
       pendingAction: pending,
     };
   }
@@ -2582,7 +3118,7 @@ export async function executePendingAction({ actionId, userId }) {
     case 'create_group_bill':
       result = await createMoneyRequest({
         creatorUserId: userId,
-        kind: 'group_split',
+        kind: 'bill_split',
         splitType: action.args.splitType || 'equal',
         totalAmountPoisha: action.args.totalAmountPoisha,
         participants: action.args.participants,
@@ -2617,7 +3153,43 @@ export async function executePendingAction({ actionId, userId }) {
     actionId: action.actionId,
   });
 
-  return { success: true, tool: action.tool, result };
+  const amtBdt = action.preview?.amountPoisha ? (action.preview.amountPoisha / 100).toFixed(2) : '0.00';
+  let message = `Action ${action.tool} executed successfully.`;
+  let messageBn = `কার্যক্রম সফলভাবে সম্পন্ন হয়েছে।`;
+
+  if (action.tool === 'send_money') {
+    const recipient = action.preview?.recipientLabel || action.args.recipientPhone;
+    message = `৳${amtBdt} successfully sent to ${recipient}.`;
+    messageBn = `${recipient}-কে ৳${amtBdt} সফলভাবে পাঠানো হয়েছে।`;
+  } else if (action.tool === 'cash_out') {
+    message = `৳${amtBdt} successfully cashed out via Agent.`;
+    messageBn = `এজেন্টের মাধ্যমে ৳${amtBdt} ক্যাশ আউট সফলভাবে সম্পন্ন হয়েছে।`;
+  } else if (action.tool === 'pay_bill') {
+    const biller = action.args.billerId || 'Bill';
+    message = `৳${amtBdt} bill payment for ${biller} completed successfully.`;
+    messageBn = `${biller} বিল বাবদ ৳${amtBdt} সফলভাবে পরিশোধ করা হয়েছে।`;
+  } else if (action.tool === 'mobile_recharge') {
+    message = `৳${amtBdt} recharge to ${action.args.recipientPhone} completed successfully.`;
+    messageBn = `${action.args.recipientPhone} নম্বরে ৳${amtBdt} রিচার্জ সফলভাবে সম্পন্ন হয়েছে।`;
+  } else if (action.tool === 'add_money') {
+    message = `৳${amtBdt} added to wallet successfully.`;
+    messageBn = `ওয়ালেটে ৳${amtBdt} সফলভাবে যোগ হয়েছে।`;
+  } else if (action.tool === 'create_schedule') {
+    message = `Payment schedule created successfully.`;
+    messageBn = `পেমেন্ট শিডিউল সফলভাবে তৈরি হয়েছে।`;
+  } else if (action.tool === 'create_rule') {
+    message = `Conditional automation rule created successfully.`;
+    messageBn = `শর্তযুক্ত অটোমেশন রুল সফলভাবে তৈরি হয়েছে।`;
+  } else if (action.tool === 'guardian_decision') {
+    message = `Child transaction of ৳${amtBdt} approved successfully.`;
+    messageBn = `সন্তানের ৳${amtBdt} লেনদেন সফলভাবে অনুমোদিত হয়েছে।`;
+  } else if (action.tool === 'create_group_bill') {
+    const count = action.args.participants?.length || 0;
+    message = `Group bill for ৳${amtBdt} ('${action.args.description || 'Split'}') created successfully. Requests sent to ${count} participants.`;
+    messageBn = `৳${amtBdt} টাকার গ্রুপ বিল ('${action.args.description || 'স্প্লিট'}') সফলভাবে তৈরি হয়েছে। ${count} জন সদস্যের কাছে অনুরোধ পাঠানো হয়েছে।`;
+  }
+
+  return { success: true, tool: action.tool, result, message, messageBn };
 }
 
 export default {

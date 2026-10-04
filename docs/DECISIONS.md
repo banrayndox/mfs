@@ -347,6 +347,21 @@
   - Full test suite: 13 test files, 118 / 118 tests passing 100%.
   - Vite client production build: clean build (2.92s).
 
-
-
-
+### M17: Conversational Financial AI Agent Upgrade (Natural Intent Parsing, Multi-Action Grounding & Zero Hallucination)
+- **ADR-018: Conversational Financial Agent Operating System**:
+  - **Natural Language Intent Recognition**: Upgraded the AI Financial Copilot beyond rigid button templates and command syntax. The agent natively parses natural requests across English, Bangla, and Banglish:
+    - *Money Transfer*: "Rahim ke 500 taka pathao", "017xxxxxxxx e 1000 send koro", "amar friend ke 200 taka dao". Validates recipient in database before execution. Rejects unknown recipients with truthful error ("এই নম্বর/অ্যাকাউন্টটি পাওয়া যায়নি, তাই transfer করা সম্ভব হচ্ছে না") without pretending success. Pre-validates wallet balance against transaction amount and fees, returning clear insufficient balance errors.
+    - *Cash Out*: "Cash out 2000", "2000 taka cashout koro", "Agent Kabir er kache 1500 taka cashout koro". Automatically locates registered Agent accounts, computes mandatory 1.5% fee (৳15 per ৳1,000) using integer poisha math, checks available balance against total (amount + fee), and prepares pending action summary.
+    - *Bill Payment*: "Pay my electricity bill", "DESCO bill 1200 taka dao", "Titas gas bill পরিশোধ করো". Identifies provider (DESCO, DPDC, BTCL, TITAS, NESCO), elicits missing amounts gracefully, checks available balance, and prepares step-up payment card.
+    - *Group Bill*: "Create a 2000 taka group bill for dinner with Rahim, Karim and Nabila". Naturally extracts bill description, resolves participant phone numbers from database, computes integer equal split shares including creator, detects vague statements ("with 3 people" -> prompts for participant names/numbers), and presents preview card before creating `MoneyRequest` in MongoDB.
+    - *Savings Plans*: "I want to save 5000 taka in the next 2 months", "Make a savings plan for my new laptop". Intelligently prompts for target amount when missing, computes monthly saving pace, and activates real `SavingsPlan` and `FinancialMemory` records.
+    - *Guardian Mode Approvals*: "Approve my child's 300 taka payment", "আমার সন্তানের পেমেন্ট অ্যাপ্রুভ করো". Truthfully reports when no pending child transactions exist, matches pending held transactions by amount and child identity, presents confirmation card, and settles transaction upon guardian T2 PIN step-up.
+    - *Scope Enforcing / Irrelevant Query Refusal*: Politely declines non-financial queries (weather, coding, jokes, trivia, recipes) in both Bangla and English while explaining UPAY's dedicated financial capabilities.
+  - **Security, Ledger & Step-Up Auth Non-Negotiables**:
+    - All money mutations use integer minor units (poisha).
+    - Money-moving actions create a canonical `PendingAction` and require valid 4-digit PIN step-up verification before execution.
+    - Execution returns actual backend transaction receipts and detail messages; zero fabricated or hallucinated transaction results.
+- **Verification & Testing**:
+  - 21 comprehensive integration tests in `server/tests/ai_copilot_conversational.test.js`.
+  - Full backend test suite: 15 test suites, 143 / 143 tests passing 100%.
+  - Frontend production build: clean Vite build (9.84s).

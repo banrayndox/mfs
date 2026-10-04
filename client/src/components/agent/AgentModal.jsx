@@ -240,15 +240,21 @@ export function AgentModal({ isOpen, onClose }) {
       } catch (e) {}
 
       // Add success message
+      const serverMsg =
+        i18n.language === 'bn'
+          ? (confirmRes.data?.messageBn || confirmRes.data?.message)
+          : (confirmRes.data?.message || confirmRes.data?.messageBn);
+
       setMessages((prev) => [
         ...prev,
         {
           id: `done-${Date.now()}`,
           sender: 'agent',
           text:
-            i18n.language === 'bn'
+            serverMsg ||
+            (i18n.language === 'bn'
               ? `✅ সফলভাবে সম্পন্ন হয়েছে! অ্যাকশন: ${activePendingAction.preview?.title || 'অনুমোদিত'}`
-              : `✅ Successfully executed! Action: ${activePendingAction.preview?.title || 'Approved'}`,
+              : `✅ Successfully executed! Action: ${activePendingAction.preview?.title || 'Approved'}`),
         },
       ]);
 
@@ -464,6 +470,14 @@ export function AgentModal({ isOpen, onClose }) {
                 <button
                   type="button"
                   onClick={() => {
+                    setMessages((prev) => [
+                      ...prev,
+                      {
+                        id: `cancel-${Date.now()}`,
+                        sender: 'agent',
+                        text: i18n.language === 'bn' ? '❌ লেনদেনটি বাতিল করা হয়েছে।' : '❌ Transaction cancelled by user.',
+                      },
+                    ]);
                     setActivePendingAction(null);
                     setStepUpPin('');
                     setConfirmError('');
