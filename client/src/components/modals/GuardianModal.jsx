@@ -14,20 +14,27 @@ import { GuardianColorIcon, CheckmarkSuccessColorIcon } from '../ui/FlaticonIcon
 import { useAuthStore } from '../../stores/authStore.js';
 import { GuardianApprovalModal } from './GuardianApprovalModal.jsx';
 
-export function GuardianModal({ isOpen, onClose }) {
+export function GuardianModal({
+  isOpen,
+  onClose,
+  initialChildPhone = '',
+  initialChildName = '',
+  initialDailyLimit = '',
+}) {
   const { user } = useAuthStore();
   const [status, setStatus] = useState(null);
   const [pendingApprovals, setPendingApprovals] = useState([]);
   const [selectedTxnForApproval, setSelectedTxnForApproval] = useState(null);
+  const [selectedActionType, setSelectedActionType] = useState('approve');
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [showAddChild, setShowAddChild] = useState(false);
-  const [childName, setChildName] = useState('');
-  const [childPhone, setChildPhone] = useState('');
+  const [childName, setChildName] = useState(initialChildName || '');
+  const [childPhone, setChildPhone] = useState(initialChildPhone || '');
   const [childPin, setChildPin] = useState('');
   const [childConfirmPin, setChildConfirmPin] = useState('');
   const [showChildPin, setShowChildPin] = useState(false);
-  const [dailyLimit, setDailyLimit] = useState('500');
+  const [dailyLimit, setDailyLimit] = useState(initialDailyLimit ? String(initialDailyLimit) : '500');
   const [editingChildLimit, setEditingChildLimit] = useState(null);
   const [newLimitVal, setNewLimitVal] = useState('');
   const [limitModalError, setLimitModalError] = useState('');
@@ -51,9 +58,15 @@ export function GuardianModal({ isOpen, onClose }) {
     if (isOpen) {
       setMsg('');
       setErr('');
+      if (initialChildPhone || initialChildName || initialDailyLimit) {
+        setShowAddChild(true);
+        if (initialChildPhone) setChildPhone(initialChildPhone);
+        if (initialChildName) setChildName(initialChildName);
+        if (initialDailyLimit) setDailyLimit(String(initialDailyLimit));
+      }
       loadData();
     }
-  }, [isOpen]);
+  }, [isOpen, initialChildPhone, initialChildName, initialDailyLimit]);
 
   // Realtime Socket.IO guardian request and decision updates
   useEffect(() => {
@@ -261,7 +274,10 @@ export function GuardianModal({ isOpen, onClose }) {
                     <div className="flex gap-2 pt-1">
                       <button
                         type="button"
-                        onClick={() => handleRejectApproval(appr.id)}
+                        onClick={() => {
+                          setSelectedActionType('reject');
+                          setSelectedTxnForApproval(appr);
+                        }}
                         disabled={actionLoading}
                         className="flex-1 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-rose-100 hover:text-rose-600 transition-all"
                       >
@@ -269,7 +285,10 @@ export function GuardianModal({ isOpen, onClose }) {
                       </button>
                       <button
                         type="button"
-                        onClick={() => setSelectedTxnForApproval(appr)}
+                        onClick={() => {
+                          setSelectedActionType('approve');
+                          setSelectedTxnForApproval(appr);
+                        }}
                         disabled={actionLoading}
                         className="flex-1 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1"
                       >
@@ -618,10 +637,15 @@ export function GuardianModal({ isOpen, onClose }) {
       <GuardianApprovalModal
         isOpen={!!selectedTxnForApproval}
         transaction={selectedTxnForApproval}
+        actionType={selectedActionType}
         onClose={() => setSelectedTxnForApproval(null)}
         onSuccess={() => {
           setSelectedTxnForApproval(null);
-          setMsg('লেনদেনটি সফলভাবে অনুমোদন করা হয়েছে!');
+          setMsg(
+            selectedActionType === 'reject'
+              ? 'লেনদেনটি প্রত্যাখ্যান করা হয়েছে।'
+              : 'লেনদেনটি সফলভাবে অনুমোদন করা হয়েছে!'
+          );
           loadData();
         }}
       />

@@ -65,11 +65,12 @@ guardianRouter.get('/approvals/:txnId', requireAuth, async (req, res, next) => {
 // Guardian approves or rejects pending transaction (Requires T2 PIN step-up)
 guardianRouter.post('/approvals/:txnId/decide', requireAuth, requireTier('T2'), async (req, res, next) => {
   try {
-    const { decision } = req.body;
+    const { decision, reason } = req.body;
     const result = await decideGuardianApproval({
       guardianUserId: req.user._id,
       txnId: req.params.txnId,
       decision,
+      reason,
     });
     if (req.stepUpToken) {
       await consumeStepUpToken(req.stepUpToken);

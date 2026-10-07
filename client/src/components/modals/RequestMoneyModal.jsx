@@ -25,18 +25,26 @@ import {
 import { useAuthStore } from '../../stores/authStore.js';
 import { formatCurrency } from '../../utils/formatters.js';
 
-export function RequestMoneyModal({ isOpen, onClose, defaultMode = 'individual', onSuccess }) {
+export function RequestMoneyModal({
+  isOpen,
+  onClose,
+  defaultMode = 'individual',
+  onSuccess,
+  initialPhone = '',
+  initialAmount = '',
+  initialDescription = '',
+}) {
   const { t, i18n } = useTranslation();
   const { user } = useAuthStore();
   const [tab, setTab] = useState(defaultMode); // 'individual' | 'group' | 'incoming'
 
   // Individual mode state
-  const [targetPhone, setTargetPhone] = useState('');
+  const [targetPhone, setTargetPhone] = useState(initialPhone || '');
   const [targetValidation, setTargetValidation] = useState({ status: 'idle', name: '', message: '' });
 
   // Common amount & description
-  const [amount, setAmount] = useState('');
-  const [description, setDescription] = useState('');
+  const [amount, setAmount] = useState(initialAmount ? String(initialAmount) : '');
+  const [description, setDescription] = useState(initialDescription || '');
 
   // Group mode state: Destination
   const [destType, setDestType] = useState('merchant'); // 'merchant' | 'agent' | 'person'
@@ -70,9 +78,12 @@ export function RequestMoneyModal({ isOpen, onClose, defaultMode = 'individual',
       setError('');
       setPayingRequestId(null);
       setPin('');
+      if (initialPhone) setTargetPhone(initialPhone);
+      if (initialAmount) setAmount(String(initialAmount));
+      if (initialDescription) setDescription(initialDescription);
       fetchRequests();
     }
-  }, [isOpen, defaultMode]);
+  }, [isOpen, defaultMode, initialPhone, initialAmount, initialDescription]);
 
   const fetchRequests = async () => {
     try {

@@ -98,5 +98,20 @@ const MoneyRequestSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+MoneyRequestSchema.add({
+  creatorUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    index: true,
+  },
+  totalAmountPoisha: {
+    type: Number,
+  },
+});
+
+MoneyRequestSchema.virtual('creatorUser').get(function () {
+  return this.creatorUserId || this.creatorId;
+});
+
 export const MoneyRequest = mongoose.model('MoneyRequest', MoneyRequestSchema);
 export default MoneyRequest;

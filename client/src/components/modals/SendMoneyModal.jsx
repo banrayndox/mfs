@@ -9,13 +9,13 @@ import { SendMoneyColorIcon, CheckmarkSuccessColorIcon } from '../ui/FlaticonIco
 import { useAuthStore } from '../../stores/authStore.js';
 import { formatCurrency } from '../../utils/formatters.js';
 
-export function SendMoneyModal({ isOpen, onClose, onSuccess }) {
+export function SendMoneyModal({ isOpen, onClose, onSuccess, initialRecipient = '', initialAmount = '' }) {
   const { user, setUser } = useAuthStore();
-  const [recipientPhone, setRecipientPhone] = useState('');
+  const [recipientPhone, setRecipientPhone] = useState(initialRecipient || '');
   const [recipientName, setRecipientName] = useState('');
   const [recipientChecking, setRecipientChecking] = useState(false);
   const [recipientError, setRecipientError] = useState('');
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState(initialAmount ? String(initialAmount) : '');
   const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -24,16 +24,16 @@ export function SendMoneyModal({ isOpen, onClose, onSuccess }) {
   // Reset modal state on open
   useEffect(() => {
     if (isOpen) {
-      setRecipientPhone('');
+      setRecipientPhone(initialRecipient || '');
       setRecipientName('');
       setRecipientChecking(false);
       setRecipientError('');
-      setAmount('');
+      setAmount(initialAmount ? String(initialAmount) : '');
       setPin('');
       setError('');
       setSuccessData(null);
     }
-  }, [isOpen]);
+  }, [isOpen, initialRecipient, initialAmount]);
 
   // Real-time recipient lookup when 11 digits entered
   useEffect(() => {
@@ -120,8 +120,8 @@ export function SendMoneyModal({ isOpen, onClose, onSuccess }) {
       );
 
       setSuccessData(sendRes.data.transaction);
-      // Update local wallet balance
-      if (user) {
+      // Update local wallet balance only if not awaiting_guardian
+      if (user && sendRes.data.transaction?.status !== 'awaiting_guardian') {
         setUser({ ...user, balancePoisha: user.balancePoisha - Math.round(total * 100) });
       }
       onSuccess?.();
@@ -147,14 +147,31 @@ export function SendMoneyModal({ isOpen, onClose, onSuccess }) {
 
         {successData ? (
           <div className="text-center py-6 space-y-3">
-            <CheckmarkSuccessColorIcon className="w-14 h-14 mx-auto" />
-            <h4 className="text-lg font-bold text-slate-900 dark:text-white">টাকা পাঠানো সফল হয়েছে!</h4>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              ৳{bdtAmount.toFixed(2)} সফলভাবে {recipientName ? `${recipientName} (${recipientPhone})` : recipientPhone}-এ স্থানান্তরিত হয়েছে।
-            </p>
-            <div className="bg-amber-50 dark:bg-slate-800 p-3 rounded-2xl text-xs text-amber-900 dark:text-amber-300 border border-amber-200/60 dark:border-slate-700">
-              💡 এআই অডিট: সিমুলেটেড লেজার এন্ট্রি সফল। আইডি: {successData._id?.slice(-8) || 'TXN-OK'}
-            </div>
+            {successData.status === 'awaiting_guardian' ? (
+              <>
+                <div className="w-14 h-14 mx-auto rounded-full bg-amber-100 dark:bg-amber-950 flex items-center justify-center">
+                  <IoAlertCircleOutline className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+                </div>
+                <h4 className="text-lg font-bold text-slate-900 dark:text-white">অভিভাবকের অনুমোদনের অপেক্ষায় (Awaiting Guardian Approval)</h4>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  আপনার ৳{bdtAmount.toFixed(2)} পাঠানোর আবেদনটি অভিভাবকের অনুমোদনের অপেক্ষায় জমা হয়েছে।
+                </p>
+                <div className="bg-amber-50 dark:bg-slate-800 p-3 rounded-2xl text-xs text-amber-900 dark:text-amber-300 border border-amber-200/60 dark:border-slate-700">
+                  ⏳ অভিভাবক অনুমোদন করলে টাকা স্থানান্তরিত হবে। আইডি: {successData._id?.slice(-8) || 'TXN-PEND'}
+                </div>
+              </>
+            ) : (
+              <>
+                <CheckmarkSuccessColorIcon className="w-14 h-14 mx-auto" />
+                <h4 className="text-lg font-bold text-slate-900 dark:text-white">টাকা পাঠানো সফল হয়েছে!</h4>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  ৳{bdtAmount.toFixed(2)} সফলভাবে {recipientName ? `${recipientName} (${recipientPhone})` : recipientPhone}-এ স্থানান্তরিত হয়েছে।
+                </p>
+                <div className="bg-amber-50 dark:bg-slate-800 p-3 rounded-2xl text-xs text-amber-900 dark:text-amber-300 border border-amber-200/60 dark:border-slate-700">
+                  💡 এআই অডিট: সিমুলেটেড লেজার এন্ট্রি সফল। আইডি: {successData._id?.slice(-8) || 'TXN-OK'}
+                </div>
+              </>
+            )}
             <button
               onClick={() => {
                 setSuccessData(null);

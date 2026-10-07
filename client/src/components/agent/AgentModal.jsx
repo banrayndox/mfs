@@ -11,6 +11,8 @@ import {
   IoAlertCircleOutline,
   IoLockClosedOutline,
   IoShieldCheckmarkOutline,
+  IoBookmarkOutline,
+  IoTrashOutline,
 } from 'react-icons/io5';
 import { AiCopilotColorIcon } from '../ui/FlaticonIcons.jsx';
 import { useSystemStore } from '../../stores/systemStore.js';
@@ -28,6 +30,13 @@ export function AgentModal({ isOpen, onClose }) {
   const [isListening, setIsListening] = useState(false);
   const [speechError, setSpeechError] = useState('');
 
+  // Memory view & history states
+  const [showMemoryView, setShowMemoryView] = useState(false);
+  const [memoryData, setMemoryData] = useState(null);
+  const [loadingMemory, setLoadingMemory] = useState(false);
+  const [newFactText, setNewFactText] = useState('');
+  const [clearingChat, setClearingChat] = useState(false);
+
   // Active PendingAction confirmation state
   const [activePendingAction, setActivePendingAction] = useState(null);
   const [stepUpPin, setStepUpPin] = useState('');
@@ -37,31 +46,152 @@ export function AgentModal({ isOpen, onClose }) {
   const messagesEndRef = useRef(null);
   const recognitionRef = useRef(null);
 
-  // Initialize welcome message on open
-  useEffect(() => {
-    if (isOpen) {
-      if (messages.length === 0) {
+  // Fetch conversation history from server
+  const fetchHistory = async () => {
+    try {
+      const token = localStorage.getItem('guardian_token');
+      const res = await axios.get('/api/copilot/history', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (res.data?.history && res.data.history.length > 0) {
+        const mapped = res.data.history.map((m) => ({
+          id: m.id || `hist-${Math.random()}`,
+          sender: m.sender === 'user' ? 'user' : 'agent',
+          text: m.text,
+          pendingAction: m.pendingAction,
+          clientAction: m.clientAction,
+        }));
+        setMessages(mapped);
+      } else {
         setMessages([
           {
             id: 'm-welcome',
             sender: 'agent',
             text:
               i18n.language === 'bn'
-                ? 'আসসালামু আলাইকুম! আমি আপনার এআই কপাইলট (AI Copilot)।\nব্যালেন্স ও লেনদেন চেক, খরচ বিশ্লেষণ ("টাকা শেষ হয় কেন?"), ২% বা রাউন্ড-আপ সঞ্চয় চালু, টাকা পাঠানো বা অ্যাপের যেকোনো ফিচার নিয়ন্ত্রণ করতে আমাকে বলতে পারেন।'
-                : 'Hello! I am your AI Copilot.\nAsk me to check balance, explain your spending habits, enable 2% or round-up micro-savings, send money safely with Guardian review, or control app features.',
+                ? 'আসসালামু আলাইকুম! আমি আপনার এআই কপাইলট (AI Copilot)।\nটাকা পাঠানো, মোবাইল রিচার্জ, বিল পেমেন্ট, ক্যাশ আউট, সঞ্চয় পরিকল্পনা, বিল ভাগাভাগি বা শিডিউল পেমেন্টের মতো যেকোনো কাজ করতে আমাকে বলুন।'
+                : 'Hello! I am your AI Copilot.\nYou can ask me to send money, recharge mobile, pay bills, cash out, create savings goals, split group bills, or schedule payments safely.',
           },
         ]);
       }
+    } catch (err) {
+      // Fallback welcome message
+      setMessages([
+        {
+          id: 'm-welcome-fallback',
+          sender: 'agent',
+          text:
+            i18n.language === 'bn'
+              ? 'আসসালামু আলাইকুম! আমি আপনার এআই কপাইলট (AI Copilot)। আমি আপনাকে কীভাবে সাহায্য করতে পারি?'
+              : 'Hello! I am your AI Copilot. How can I help you today?',
+        },
+      ]);
+    }
+  };
+
+  const fetchMemory = async () => {
+    setLoadingMemory(true);
+    try {
+      const token = localStorage.getItem('guardian_token');
+      const res = await axios.get('/api/copilot/memory', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (res.data?.success) {
+        setMemoryData(res.data);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingMemory(false);
+    }
+  };
+
+  const handleClearChat = async () => {
+    if (!window.confirm(i18n.language === 'bn' ? 'আপনি কি চ্যাট ইতিহাস মুছে ফেলতে চান?' : 'Clear conversation history?')) {
+      return;
+    }
+    setClearingChat(true);
+    try {
+      const token = localStorage.getItem('guardian_token');
+      await axios.delete('/api/copilot/history', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      setMessages([
+        {
+          id: `m-cleared-${Date.now()}`,
+          sender: 'agent',
+          text:
+            i18n.language === 'bn'
+              ? 'চ্যাট হিস্ট্রি সফলভাবে মুছে ফেলা হয়েছে। আমি আপনাকে কীভাবে সাহায্য করতে পারি?'
+              : 'Conversation history cleared. How can I help you today?',
+        },
+      ]);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setClearingChat(false);
+    }
+  };
+
+  const handleAddFact = async (e) => {
+    e.preventDefault();
+    if (!newFactText.trim()) return;
+    try {
+      const token = localStorage.getItem('guardian_token');
+      await axios.post(
+        '/api/copilot/memory',
+        { fact: newFactText.trim() },
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+      );
+      setNewFactText('');
+      fetchMemory();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDeleteFact = async (id) => {
+    try {
+      const token = localStorage.getItem('guardian_token');
+      await axios.delete(`/api/copilot/memory/${id}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      fetchMemory();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleClearAllMemory = async () => {
+    if (!window.confirm(i18n.language === 'bn' ? 'সংরক্ষিত সব তথ্য ও মেমোরি মুছে ফেলতে চান?' : 'Clear all memory and remembered notes?')) {
+      return;
+    }
+    try {
+      const token = localStorage.getItem('guardian_token');
+      await axios.delete('/api/copilot/memory', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      fetchMemory();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Initialize and load conversation history on open
+  useEffect(() => {
+    if (isOpen) {
+      fetchHistory();
       setSpeechError('');
       setConfirmError('');
       setActivePendingAction(null);
+      setShowMemoryView(false);
     }
-  }, [isOpen, i18n.language]);
+  }, [isOpen]);
 
   // Scroll to bottom on new message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, activePendingAction]);
+  }, [messages, activePendingAction, showMemoryView]);
 
   // Web Speech API Voice Recognition setup
   const toggleListening = () => {
@@ -160,7 +290,7 @@ export function AgentModal({ isOpen, onClose }) {
 
       // Check for App Control triggers (logout, navigate, open modal)
       if (res.data.clientAction) {
-        const { type, path, modal, subview } = res.data.clientAction;
+        const { type, path, modal, subview, prefill } = res.data.clientAction;
         if (type === 'logout') {
           setTimeout(() => {
             localStorage.removeItem('guardian_token');
@@ -175,7 +305,7 @@ export function AgentModal({ isOpen, onClose }) {
           }, 800);
         } else if (type === 'open_modal' && modal) {
           setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('mfs:open_modal', { detail: { modal } }));
+            window.dispatchEvent(new CustomEvent('mfs:open_modal', { detail: { modal, prefill } }));
             onClose();
           }, 700);
         }
@@ -299,20 +429,209 @@ export function AgentModal({ isOpen, onClose }) {
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
-            aria-label="Close Agent modal"
-          >
-            <IoCloseOutline className="w-6 h-6 text-slate-800 dark:text-slate-200" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => {
+                const nextState = !showMemoryView;
+                setShowMemoryView(nextState);
+                if (nextState) fetchMemory();
+              }}
+              className={`p-1.5 rounded-full transition-colors flex items-center gap-1 text-xs font-semibold px-2.5 ${
+                showMemoryView
+                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm'
+                  : 'hover:bg-black/10 dark:hover:bg-white/10 text-slate-800 dark:text-slate-200'
+              }`}
+              title={i18n.language === 'bn' ? 'সংরক্ষিত মেমোরি ও তথ্য' : 'Copilot Memory'}
+            >
+              <IoBookmarkOutline className="w-3.5 h-3.5" />
+              <span className="text-[11px] hidden xs:inline">{i18n.language === 'bn' ? 'মেমোরি' : 'Memory'}</span>
+            </button>
+
+            <button
+              onClick={handleClearChat}
+              disabled={clearingChat || messages.length <= 1}
+              className="p-1.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors text-slate-700 dark:text-slate-300 disabled:opacity-30"
+              title={i18n.language === 'bn' ? 'চ্যাট হিস্ট্রি মুছুন' : 'Clear Chat'}
+              aria-label="Clear Chat"
+            >
+              <IoTrashOutline className="w-4 h-4" />
+            </button>
+
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+              aria-label="Close Agent modal"
+            >
+              <IoCloseOutline className="w-6 h-6 text-slate-800 dark:text-slate-200" />
+            </button>
+          </div>
         </div>
 
-        {/* Message Thread */}
-        <div
-          className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3 bg-slate-50 dark:bg-slate-950 no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
+        {showMemoryView ? (
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-slate-950">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <span>🧠</span> {i18n.language === 'bn' ? 'স্মৃতি ও পছন্দসমূহ (Copilot Memory)' : 'Copilot Memory'}
+                </h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  {i18n.language === 'bn'
+                    ? 'কপাইলট লেনদেন ও বিল পেমেন্ট সহজ করতে এই তথ্যগুলো মনে রাখে।'
+                    : 'Personal context remembered by Copilot to automate actions.'}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowMemoryView(false)}
+                className="text-xs px-2.5 py-1 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors"
+              >
+                {i18n.language === 'bn' ? 'চ্যাটে ফিরুন' : 'Back to Chat'}
+              </button>
+            </div>
+
+            {/* Form to add new fact */}
+            <form onSubmit={handleAddFact} className="bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
+              <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 block">
+                {i18n.language === 'bn' ? 'নতুন কোনো তথ্য মনে রাখতে বলুন:' : 'Add a fact for Copilot to remember:'}
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newFactText}
+                  onChange={(e) => setNewFactText(e.target.value)}
+                  placeholder={i18n.language === 'bn' ? 'যেমন: করিম আমার ভাই, ডেসকো হিসাব ৪৪২১০৯' : 'e.g. Karim is my brother, DESCO 442109'}
+                  className="flex-1 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-brand-blue"
+                />
+                <button
+                  type="submit"
+                  disabled={!newFactText.trim()}
+                  className="px-3 py-1.5 bg-brand-yellow text-slate-900 font-semibold text-xs rounded-xl disabled:opacity-40 hover:bg-brand-yellow-hover transition-colors"
+                >
+                  {i18n.language === 'bn' ? 'সংরক্ষণ' : 'Save'}
+                </button>
+              </div>
+            </form>
+
+            {loadingMemory ? (
+              <div className="text-center py-8 text-xs text-slate-500">
+                {i18n.language === 'bn' ? 'মেমোরি লোড হচ্ছে...' : 'Loading memories...'}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {/* Contact Aliases */}
+                <div className="bg-white dark:bg-slate-900 rounded-2xl p-3 border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-2 flex items-center justify-between">
+                    <span>👥 {i18n.language === 'bn' ? 'পরিচিত ব্যক্তিবর্গ (Aliases)' : 'Contact Aliases'}</span>
+                    <span className="text-[10px] font-normal text-slate-500">{memoryData?.contactAliases?.length || 0}</span>
+                  </div>
+                  {(!memoryData?.contactAliases || memoryData.contactAliases.length === 0) ? (
+                    <p className="text-[11px] text-slate-400 italic">
+                      {i18n.language === 'bn' ? 'কোনো কন্টাক্ট সংরক্ষিত নেই (বলুন: "রাকিব আমার ভাই")' : 'No aliases saved (say: "Rakib is my brother")'}
+                    </p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {memoryData.contactAliases.map((a, idx) => (
+                        <div key={a._id || idx} className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-800/60 p-2 rounded-xl">
+                          <div>
+                            <span className="font-semibold text-slate-900 dark:text-white capitalize">{a.relationship || a.alias}</span>
+                            <span className="text-slate-500 dark:text-slate-400 ml-1.5">→ {a.name} {a.phone && `(${a.phone})`}</span>
+                          </div>
+                          <button
+                            onClick={() => handleDeleteFact(a._id)}
+                            className="text-rose-500 hover:text-rose-700 p-1"
+                            title="Delete alias"
+                          >
+                            <IoTrashOutline className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Utility Accounts */}
+                <div className="bg-white dark:bg-slate-900 rounded-2xl p-3 border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-2 flex items-center justify-between">
+                    <span>⚡ {i18n.language === 'bn' ? 'ইউটিলিটি বিলের অ্যাকাউন্ট' : 'Utility Bill Accounts'}</span>
+                    <span className="text-[10px] font-normal text-slate-500">{memoryData?.utilityAccounts?.length || 0}</span>
+                  </div>
+                  {(!memoryData?.utilityAccounts || memoryData.utilityAccounts.length === 0) ? (
+                    <p className="text-[11px] text-slate-400 italic">
+                      {i18n.language === 'bn' ? 'কোনো বিলের অ্যাকাউন্ট সংরক্ষিত নেই' : 'No utility accounts saved'}
+                    </p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {memoryData.utilityAccounts.map((u, idx) => (
+                        <div key={u._id || idx} className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-800/60 p-2 rounded-xl">
+                          <div>
+                            <span className="font-semibold text-slate-900 dark:text-white uppercase">{u.billerId}</span>
+                            <span className="text-slate-500 dark:text-slate-400 ml-1.5">Acc: {u.accountNo}</span>
+                          </div>
+                          <button
+                            onClick={() => handleDeleteFact(u._id)}
+                            className="text-rose-500 hover:text-rose-700 p-1"
+                            title="Delete utility"
+                          >
+                            <IoTrashOutline className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Financial Goals & Notes */}
+                <div className="bg-white dark:bg-slate-900 rounded-2xl p-3 border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-2 flex items-center justify-between">
+                    <span>🎯 {i18n.language === 'bn' ? 'সক্রিয় লক্ষ্য ও নোট' : 'Goals & Notes'}</span>
+                    <span className="text-[10px] font-normal text-slate-500">{((memoryData?.financialGoals?.length || 0) + (memoryData?.contextNotes?.length || 0))}</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {memoryData?.financialGoals?.map((g, idx) => (
+                      <div key={g._id || idx} className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-800/60 p-2 rounded-xl">
+                        <div>
+                          <span className="font-semibold text-slate-900 dark:text-white">{g.title}</span>
+                          <span className="text-amber-600 dark:text-amber-400 ml-1.5">৳{(g.targetPoisha / 100).toFixed(0)}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {memoryData?.contextNotes?.map((n, idx) => (
+                      <div key={n._id || idx} className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-800/60 p-2 rounded-xl">
+                        <span className="text-slate-700 dark:text-slate-300">{n.fact}</span>
+                        <button
+                          onClick={() => handleDeleteFact(n._id)}
+                          className="text-rose-500 hover:text-rose-700 p-1"
+                          title="Delete note"
+                        >
+                          <IoTrashOutline className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                    {(!memoryData?.financialGoals?.length && !memoryData?.contextNotes?.length) && (
+                      <p className="text-[11px] text-slate-400 italic">
+                        {i18n.language === 'bn' ? 'কোনো লক্ষ্য বা নোট নেই' : 'No goals or notes saved'}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Clear All Memory Button */}
+                <div className="pt-2 text-center">
+                  <button
+                    onClick={handleClearAllMemory}
+                    className="text-xs text-rose-600 dark:text-rose-400 hover:underline font-medium"
+                  >
+                    🗑️ {i18n.language === 'bn' ? 'সংরক্ষিত সব তথ্য মুছে ফেলুন (Clear All)' : 'Clear All Memory'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Message Thread */
+          <div
+            className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3 bg-slate-50 dark:bg-slate-950 no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
           {messages.map((msg) => (
             <div
               key={msg.id}
@@ -499,73 +818,89 @@ export function AgentModal({ isOpen, onClose }) {
 
           <div ref={messagesEndRef} />
         </div>
+      )}
 
-        {/* Speech Error alert */}
-        {speechError && (
-          <div className="px-4 py-1.5 bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 text-[11px] border-t border-amber-200 dark:border-amber-800 flex justify-between items-center">
-            <span>{speechError}</span>
-            <button onClick={() => setSpeechError('')} className="font-bold underline ml-2">বন্ধ</button>
-          </div>
-        )}
-
-        {/* Quick Suggestion Chips - Displayed in two lines */}
-        <div className="px-3 py-2 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-1.5 text-[11px]">
-          {/* Line 1 */}
-          <div
-            className="flex items-center gap-1.5 overflow-x-auto no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          >
-            <button
-              onClick={() => handleSendMessage(i18n.language === 'bn' ? 'ব্যালেন্স কত আছে?' : 'What is my balance?')}
-              className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 whitespace-nowrap hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-            >
-              💰 {i18n.language === 'bn' ? 'ব্যালেন্স কত?' : 'Check Balance'}
-            </button>
-            <button
-              onClick={() => handleSendMessage(i18n.language === 'bn' ? 'টাকা কেন শেষ হয়ে যায়?' : 'Why am I running out of money every month?')}
-              className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 whitespace-nowrap hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-            >
-              📊 {i18n.language === 'bn' ? 'খরচের কারণ' : 'Spending Habit'}
-            </button>
-            <button
-              onClick={() => handleSendMessage(i18n.language === 'bn' ? 'গত মাসের সাথে খরচের তুলনা করো' : 'Compare this month with last month')}
-              className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 whitespace-nowrap hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-            >
-              ⚖️ {i18n.language === 'bn' ? 'খরচের তুলনা' : 'Compare Spending'}
-            </button>
-            <button
-              onClick={() => handleSendMessage(i18n.language === 'bn' ? 'প্রতি লেনদেন থেকে ২% সঞ্চয় করো' : 'Save 2% from every transaction')}
-              className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 whitespace-nowrap hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-            >
-              🌱 {i18n.language === 'bn' ? '২% সঞ্চয় চালু' : '2% Savings'}
-            </button>
-          </div>
-
-          {/* Line 2 */}
-          <div
-            className="flex items-center gap-1.5 overflow-x-auto no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          >
-            <button
-              onClick={() => handleSendMessage(i18n.language === 'bn' ? 'রাউন্ড-আপ সেভিংস চালু করো' : 'Enable round-up savings')}
-              className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 whitespace-nowrap hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-            >
-              🔄 {i18n.language === 'bn' ? 'রাউন্ড-আপ' : 'Round-Up'}
-            </button>
-            <button
-              onClick={() => handleSendMessage(i18n.language === 'bn' ? 'কাল সকাল ১০টায় বিদ্যুৎ বিল দেওয়ার রিমাইন্ডার দাও' : 'Set a reminder to pay electricity bill tomorrow')}
-              className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 whitespace-nowrap hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-            >
-              ⏰ {i18n.language === 'bn' ? 'রিমাইন্ডার' : 'Reminder'}
-            </button>
-            <button
-              onClick={() => handleSendMessage(i18n.language === 'bn' ? 'সেন্ড মানি এবং ক্যাশ আউটের মধ্যে পার্থক্য কী?' : 'What is the difference between Send Money and Cash Out?')}
-              className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 whitespace-nowrap hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-            >
-              📖 {i18n.language === 'bn' ? 'সার্ভিস গাইড' : 'Service Guide'}
-            </button>
-          </div>
+      {/* Speech Error alert */}
+      {speechError && (
+        <div className="px-4 py-1.5 bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 text-[11px] border-t border-amber-200 dark:border-amber-800 flex justify-between items-center">
+          <span>{speechError}</span>
+          <button onClick={() => setSpeechError('')} className="font-bold underline ml-2">বন্ধ</button>
         </div>
+      )}
+
+      {/* Quick Suggestion Chips - Displayed in two lines */}
+      <div className="px-3 py-2 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-1.5 text-[11px]">
+        {/* Line 1: Core Financial Actions */}
+        <div
+          className="flex items-center gap-1.5 overflow-x-auto no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          <button
+            onClick={() => handleSendMessage(i18n.language === 'bn' ? 'টাকা পাঠাতে চাই' : 'I want to send money')}
+            className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 whitespace-nowrap hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+          >
+            💸 {i18n.language === 'bn' ? 'টাকা পাঠানো' : 'Send Money'}
+          </button>
+          <button
+            onClick={() => handleSendMessage(i18n.language === 'bn' ? 'মোবাইল রিচার্জ করতে চাই' : 'I want to recharge mobile')}
+            className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 whitespace-nowrap hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+          >
+            📱 {i18n.language === 'bn' ? 'মোবাইল রিচার্জ' : 'Mobile Recharge'}
+          </button>
+          <button
+            onClick={() => handleSendMessage(i18n.language === 'bn' ? 'বিদ্যুৎ বিল দিতে চাই' : 'I want to pay electricity bill')}
+            className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 whitespace-nowrap hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+          >
+            ⚡ {i18n.language === 'bn' ? 'বিল পরিশোধ' : 'Pay Bill'}
+          </button>
+          <button
+            onClick={() => handleSendMessage(i18n.language === 'bn' ? 'ক্যাশ আউট করতে চাই' : 'I want to cash out')}
+            className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 whitespace-nowrap hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+          >
+            🏧 {i18n.language === 'bn' ? 'ক্যাশ আউট' : 'Cash Out'}
+          </button>
+        </div>
+
+        {/* Line 2: Smart Financial Management & Automation */}
+        <div
+          className="flex items-center gap-1.5 overflow-x-auto no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          <button
+            onClick={() => handleSendMessage(i18n.language === 'bn' ? 'বন্ধুদের সাথে বিল ভাগ করো' : 'Split bill with friends')}
+            className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 whitespace-nowrap hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+          >
+            👥 {i18n.language === 'bn' ? 'বিল ভাগাভাগি' : 'Split Bill'}
+          </button>
+          <button
+            onClick={() => handleSendMessage(i18n.language === 'bn' ? 'নতুন সঞ্চয় লক্ষ্য তৈরি করো' : 'Create a new savings goal')}
+            className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 whitespace-nowrap hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+          >
+            🎯 {i18n.language === 'bn' ? 'সঞ্চয় লক্ষ্য' : 'Savings Goal'}
+          </button>
+          <button
+            onClick={() => handleSendMessage(i18n.language === 'bn' ? 'মাসিক পেমেন্ট শিডিউল করো' : 'Schedule a monthly payment')}
+            className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 whitespace-nowrap hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+          >
+            📅 {i18n.language === 'bn' ? 'অটো শিডিউল' : 'Auto Schedule'}
+          </button>
+          {user?.accountType === 'CHILD' ? (
+            <button
+              onClick={() => handleSendMessage(i18n.language === 'bn' ? 'আমার দৈনিক খরচের লিমিট কত?' : 'What is my daily spending limit?')}
+              className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 whitespace-nowrap hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+            >
+              📊 {i18n.language === 'bn' ? 'দৈনিক লিমিট' : 'Daily Limit'}
+            </button>
+          ) : (
+            <button
+              onClick={() => handleSendMessage(i18n.language === 'bn' ? 'গার্ডিয়ান মোড কন্ট্রোল দেখাও' : 'Show Guardian Mode controls')}
+              className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 whitespace-nowrap hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+            >
+              🛡️ {i18n.language === 'bn' ? 'গার্ডিয়ান মোড' : 'Guardian Mode'}
+            </button>
+          )}
+        </div>
+      </div>
 
         {/* Input Bar */}
         <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2">

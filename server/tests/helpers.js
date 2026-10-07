@@ -16,6 +16,8 @@ import {
   ProtectedProfile,
   SavingsPlan,
   FinancialMemory,
+  CopilotMessage,
+  CopilotActionState,
 } from '../src/models/index.js';
 
 let replSet = null;
@@ -49,6 +51,8 @@ export async function setupTestDb() {
     ProtectedProfile,
     SavingsPlan,
     FinancialMemory,
+    CopilotMessage,
+    CopilotActionState,
   ];
 
   for (const m of models) {

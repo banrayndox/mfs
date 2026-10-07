@@ -44,19 +44,24 @@ export function App() {
   // Modal states
   const [isAgentOpen, setIsAgentOpen] = useState(false);
   const [isSendOpen, setIsSendOpen] = useState(false);
+  const [sendParams, setSendParams] = useState({ recipient: '', amount: '' });
   const [isCashOutOpen, setIsCashOutOpen] = useState(false);
+  const [cashOutParams, setCashOutParams] = useState({ agentPhone: '', amount: '' });
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isAgentDashboardOpen, setIsAgentDashboardOpen] = useState(false);
   const [isRechargeOpen, setIsRechargeOpen] = useState(false);
+  const [rechargeParams, setRechargeParams] = useState({ phone: '', operator: '', amount: '' });
   const [isPayBillOpen, setIsPayBillOpen] = useState(false);
   const [payBillParams, setPayBillParams] = useState({ biller: 'DPDC', amount: '' });
   const [isAddMoneyOpen, setIsAddMoneyOpen] = useState(false);
   const [isSavingsOpen, setIsSavingsOpen] = useState(false);
   const [isRequestOpen, setIsRequestOpen] = useState(false);
   const [requestMode, setRequestMode] = useState('individual');
+  const [requestParams, setRequestParams] = useState({ phone: '', amount: '', description: '' });
   const [isCheckMessageOpen, setIsCheckMessageOpen] = useState(false);
   const [isGuardianOpen, setIsGuardianOpen] = useState(false);
+  const [guardianParams, setGuardianParams] = useState({ childPhone: '', childName: '', dailyLimit: '' });
   const [isScheduledRulesOpen, setIsScheduledRulesOpen] = useState(false);
   const [isChangePinOpen, setIsChangePinOpen] = useState(false);
 
@@ -75,17 +80,66 @@ export function App() {
 
       if (e.detail?.subview === 'savings') {
         setIsSavingsOpen(true);
+      } else if (e.detail?.subview === 'guardian' || path === '/guardian') {
+        setIsGuardianOpen(true);
       }
     };
 
     const handleOpenModal = (e) => {
-      const { modal } = e.detail || {};
+      const { modal, prefill = {} } = e.detail || {};
       if (modal === 'change_pin') {
         setIsChangePinOpen(true);
       } else if (modal === 'savings') {
         setIsSavingsOpen(true);
-      } else if (modal === 'send') {
+      } else if (modal === 'send' || modal === 'send_money') {
+        setSendParams({
+          recipient: prefill.recipient || '',
+          amount: prefill.amount ? String(prefill.amount) : '',
+        });
         setIsSendOpen(true);
+      } else if (modal === 'recharge' || modal === 'mobile_recharge') {
+        setRechargeParams({
+          phone: prefill.phone || '',
+          operator: prefill.operator || '',
+          amount: prefill.amount ? String(prefill.amount) : '',
+        });
+        setIsRechargeOpen(true);
+      } else if (modal === 'cashout' || modal === 'cash_out') {
+        setCashOutParams({
+          agentPhone: prefill.agentPhone || '',
+          amount: prefill.amount ? String(prefill.amount) : '',
+        });
+        setIsCashOutOpen(true);
+      } else if (modal === 'paybill' || modal === 'pay_bill') {
+        setPayBillParams({
+          biller: prefill.biller || 'DPDC',
+          amount: prefill.amount ? String(prefill.amount) : '',
+        });
+        setIsPayBillOpen(true);
+      } else if (modal === 'guardian' || modal === 'guardian_mode') {
+        setGuardianParams({
+          childPhone: prefill.childPhone || '',
+          childName: prefill.childName || '',
+          dailyLimit: prefill.dailyLimit ? String(prefill.dailyLimit) : '',
+        });
+        setIsGuardianOpen(true);
+      } else if (modal === 'request' || modal === 'request_money') {
+        setRequestMode('individual');
+        setRequestParams({
+          phone: prefill.fromPhone || prefill.phone || '',
+          amount: prefill.amount ? String(prefill.amount) : '',
+          description: prefill.note || prefill.description || '',
+        });
+        setIsRequestOpen(true);
+      } else if (modal === 'group_bill' || modal === 'group_split') {
+        setRequestMode('group');
+        setIsRequestOpen(true);
+      } else if (modal === 'check_message') {
+        setIsCheckMessageOpen(true);
+      } else if (modal === 'rules' || modal === 'scheduled') {
+        setIsScheduledRulesOpen(true);
+      } else if (modal === 'add_money') {
+        setIsAddMoneyOpen(true);
       }
     };
 
@@ -300,6 +354,8 @@ export function App() {
         isOpen={isSendOpen}
         onClose={() => setIsSendOpen(false)}
         onSuccess={fetchUserProfile}
+        initialRecipient={sendParams.recipient}
+        initialAmount={sendParams.amount}
       />
 
       {/* 3. Cash Out Modal */}
@@ -307,6 +363,8 @@ export function App() {
         isOpen={isCashOutOpen}
         onClose={() => setIsCashOutOpen(false)}
         onSuccess={fetchUserProfile}
+        initialAgentPhone={cashOutParams.agentPhone}
+        initialAmount={cashOutParams.amount}
       />
 
       {/* 4. Mobile Recharge Modal */}
@@ -314,6 +372,9 @@ export function App() {
         isOpen={isRechargeOpen}
         onClose={() => setIsRechargeOpen(false)}
         onSuccess={fetchUserProfile}
+        initialPhone={rechargeParams.phone}
+        initialOperator={rechargeParams.operator}
+        initialAmount={rechargeParams.amount}
       />
 
       {/* 5. Pay Bill Modal */}
@@ -344,6 +405,9 @@ export function App() {
         onClose={() => setIsRequestOpen(false)}
         defaultMode={requestMode}
         onSuccess={fetchUserProfile}
+        initialPhone={requestParams.phone}
+        initialAmount={requestParams.amount}
+        initialDescription={requestParams.description}
       />
 
       {/* 9. Check Message (Scam Shield) Modal */}
@@ -356,6 +420,9 @@ export function App() {
       <GuardianModal
         isOpen={isGuardianOpen}
         onClose={() => setIsGuardianOpen(false)}
+        initialChildPhone={guardianParams.childPhone}
+        initialChildName={guardianParams.childName}
+        initialDailyLimit={guardianParams.dailyLimit}
       />
 
       {/* 11. Scheduled & Conditional Rules Modal */}

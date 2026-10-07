@@ -32,6 +32,8 @@ yarn-error.log*
 # OS and Editor files
 .DS_Store
 Thumbs.db
+._*
+**/._*
 .cursor/
 .vscode/
 .idea/

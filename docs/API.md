@@ -815,6 +815,101 @@ The AI Financial Copilot (`/api/ai/chat`) is hardened against real-world ambiguo
 5. **Bilingual & Banglish NL Understanding**:
    - Accurately processes natural Banglish expressions ("amar balance koto", "savings bondho koro", "taka pathate chai").
 
+---
+
+## 11. AI Copilot Conversational & Long-Term Memory
+
+### `GET /api/copilot/history`
+Retrieves persistent conversation history for the authenticated user in chronological order.
+- **Headers**: `Authorization: Bearer <token>`
+- **Query Parameters**: `limit` (optional, default `40`)
+- **Response**: `200 OK`
+  ```json
+  {
+    "success": true,
+    "history": [
+      {
+        "id": "6ac3f...",
+        "sender": "user",
+        "text": "Remember that Rakib is my brother",
+        "createdAt": "2026-10-06T01:30:00.000Z"
+      },
+      {
+        "id": "6ac3f...",
+        "sender": "agent",
+        "text": "📝 Noted and recorded: Rakib is your brother.",
+        "createdAt": "2026-10-06T01:30:01.000Z"
+      }
+    ]
+  }
+  ```
+
+### `DELETE /api/copilot/history`
+Clears persistent chat history for the authenticated user.
+- **Headers**: `Authorization: Bearer <token>`
+- **Response**: `200 OK`
+  ```json
+  {
+    "success": true,
+    "message": "Conversation history cleared successfully."
+  }
+  ```
+
+### `GET /api/copilot/memory`
+Retrieves all remembered facts, contact relationship aliases, saved utility accounts, financial preferences, and context notes.
+- **Headers**: `Authorization: Bearer <token>`
+- **Response**: `200 OK`
+  ```json
+  {
+    "success": true,
+    "contactAliases": [
+      {
+        "alias": "brother",
+        "name": "Rakib",
+        "phone": "01710000002",
+        "relationship": "brother"
+      }
+    ],
+    "utilityAccounts": [
+      {
+        "billerId": "DESCO",
+        "accountNo": "442109",
+        "nickname": "DESCO Account"
+      }
+    ],
+    "contextNotes": [
+      {
+        "fact": "I prefer paying rent in the first week",
+        "category": "general"
+      }
+    ],
+    "summaryBn": "...",
+    "summaryEn": "..."
+  }
+  ```
+
+### `POST /api/copilot/memory`
+Remembers a new personal fact, contact alias, or utility account.
+- **Headers**: `Authorization: Bearer <token>`
+- **Request Body**:
+  ```json
+  {
+    "fact": "Karim is my brother"
+  }
+  ```
+- **Response**: `201 Created`
+
+### `DELETE /api/copilot/memory/:id`
+Deletes a specific remembered fact or alias by ID.
+- **Headers**: `Authorization: Bearer <token>`
+- **Response**: `200 OK`
+
+### `DELETE /api/copilot/memory`
+Clears all remembered contact aliases, utility accounts, and contextual notes for the user.
+- **Headers**: `Authorization: Bearer <token>`
+- **Response**: `200 OK`
+
+
 
 
 

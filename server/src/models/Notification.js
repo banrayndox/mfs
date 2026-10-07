@@ -28,6 +28,8 @@ const NotificationSchema = new mongoose.Schema(
         'rule_executed',
         'reminder',
         'system',
+        'copilot',
+        'ai_copilot',
       ],
       default: 'system',
       index: true,

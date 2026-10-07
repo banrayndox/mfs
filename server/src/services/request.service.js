@@ -52,9 +52,11 @@ export async function createMoneyRequest({
 
   const request = await MoneyRequest.create({
     creatorId: creator._id,
+    creatorUserId: creator._id,
     kind,
     splitType,
     totalAmount: totalAmountPoisha,
+    totalAmountPoisha,
     remainingAmount: totalAmountPoisha,
     description: description || 'Money Request',
     merchantName,

@@ -94,12 +94,79 @@ agentAiRouter.get('/insights', requireAuth, async (req, res, next) => {
   }
 });
 
-// Get User Financial Memory & Micro-Savings Configuration
+// Get Conversation History
+agentAiRouter.get('/history', requireAuth, async (req, res, next) => {
+  try {
+    const { getConversationHistory } = await import('../services/copilot/memory.service.js');
+    const limit = parseInt(req.query.limit || '40', 10);
+    const history = await getConversationHistory({ userId: req.user._id, limit });
+    res.json({ success: true, history });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Clear Conversation History
+agentAiRouter.delete('/history', requireAuth, async (req, res, next) => {
+  try {
+    const { clearConversationHistory } = await import('../services/copilot/memory.service.js');
+    await clearConversationHistory({ userId: req.user._id });
+    res.json({ success: true, message: 'Conversation history cleared successfully.' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Get User Financial Memory & Remembered Facts
 agentAiRouter.get('/memory', requireAuth, async (req, res, next) => {
   try {
-    const { getOrCreateFinancialMemory } = await import('../services/microSavings.service.js');
+    const { recallMemories, getOrCreateFinancialMemory } = await import('../services/copilot/memory.service.js');
     const memory = await getOrCreateFinancialMemory(req.user._id);
-    res.json({ success: true, memory });
+    const recalled = await recallMemories({ userId: req.user._id, query: req.query.q, category: req.query.category });
+    res.json({ success: true, memory, ...recalled });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Remember a New Personal Fact, Preference, or Contact Alias
+agentAiRouter.post('/memory', requireAuth, async (req, res, next) => {
+  try {
+    const { rememberFact } = await import('../services/copilot/memory.service.js');
+    const { fact, category, key, value } = req.body;
+    if (!fact) {
+      return res.status(400).json({ code: 'BAD_REQUEST', message: 'Fact text is required.' });
+    }
+    const result = await rememberFact({
+      userId: req.user._id,
+      fact,
+      category,
+      key,
+      value,
+    });
+    res.status(201).json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Delete a Specific Remembered Fact / Alias / Utility
+agentAiRouter.delete('/memory/:id', requireAuth, async (req, res, next) => {
+  try {
+    const { forgetFact } = await import('../services/copilot/memory.service.js');
+    const result = await forgetFact({ userId: req.user._id, factId: req.params.id });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Clear All User Remembered Facts & Context
+agentAiRouter.delete('/memory', requireAuth, async (req, res, next) => {
+  try {
+    const { clearUserMemory } = await import('../services/copilot/memory.service.js');
+    await clearUserMemory({ userId: req.user._id });
+    res.json({ success: true, message: 'All personal memory notes and aliases cleared.' });
   } catch (err) {
     next(err);
   }

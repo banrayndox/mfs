@@ -1,20 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { IoCloseOutline } from 'react-icons/io5';
 import { RechargeColorIcon, CheckmarkSuccessColorIcon } from '../ui/FlaticonIcons.jsx';
 import { useAuthStore } from '../../stores/authStore.js';
 import { formatCurrency } from '../../utils/formatters.js';
 
-export function RechargeModal({ isOpen, onClose, onSuccess }) {
+export function RechargeModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  initialPhone = '',
+  initialOperator = '',
+  initialAmount = '',
+}) {
   const { user, setUser } = useAuthStore();
-  const [phone, setPhone] = useState(user?.phone || '');
-  const [operator, setOperator] = useState('Grameenphone');
+  const [phone, setPhone] = useState(initialPhone || user?.phone || '');
+  const [operator, setOperator] = useState(initialOperator || 'Grameenphone');
   const [simType, setSimType] = useState('prepaid');
-  const [amount, setAmount] = useState('50');
+  const [amount, setAmount] = useState(initialAmount ? String(initialAmount) : '50');
   const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successData, setSuccessData] = useState(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setPhone(initialPhone || user?.phone || '');
+      if (initialOperator) setOperator(initialOperator);
+      if (initialAmount) setAmount(String(initialAmount));
+      setPin('');
+      setError('');
+      setSuccessData(null);
+    }
+  }, [isOpen, initialPhone, initialOperator, initialAmount, user?.phone]);
 
   if (!isOpen) return null;
 

@@ -13,7 +13,6 @@ import {
   SavingsColorIcon,
   RequestMoneyColorIcon,
   GuardianColorIcon,
-  CheckMessageColorIcon,
   RemindersColorIcon,
   ScheduledRulesColorIcon,
   GroupBillColorIcon,
@@ -25,25 +24,25 @@ export function Home({ onSelectService, onSelectSafety, onOpenAgent }) {
   const { user } = useAuthStore();
 
   const primaryServices = [
-    { id: 'send', label: t('services.sendMoney'), icon: SendMoneyColorIcon, color: 'bg-blue-50 dark:bg-blue-950/40' },
-    { id: 'recharge', label: t('services.mobileRecharge'), icon: RechargeColorIcon, color: 'bg-emerald-50 dark:bg-emerald-950/40' },
-    { id: 'cashout', label: t('services.cashOut'), icon: CashOutColorIcon, color: 'bg-green-50 dark:bg-green-950/40' },
-    { id: 'paybill', label: t('services.payBill'), icon: PayBillColorIcon, color: 'bg-indigo-50 dark:bg-indigo-950/40' },
-    { id: 'addmoney', label: t('services.addMoney'), icon: AddMoneyColorIcon, color: 'bg-purple-50 dark:bg-purple-950/40' },
-    { id: 'savings', label: t('services.savings'), icon: SavingsColorIcon, color: 'bg-teal-50 dark:bg-teal-950/40' },
-    // { id: 'transfer', label: t('services.fundTransfer'), icon: IoSwapHorizontalOutline, color: 'text-cyan-600 bg-cyan-50 dark:bg-cyan-950/50' },
-    { id: 'request', label: t('services.requestMoney'), icon: RequestMoneyColorIcon, color: 'bg-rose-50 dark:bg-rose-950/40' },
-    // { id: 'payment', label: t('services.makePayment'), icon: IoQrCodeOutline, color: 'text-orange-600 bg-orange-50 dark:bg-orange-950/50' },
+    { id: 'send', label: t('services.sendMoney'), icon: SendMoneyColorIcon },
+    { id: 'recharge', label: t('services.mobileRecharge'), icon: RechargeColorIcon },
+    { id: 'cashout', label: t('services.cashOut'), icon: CashOutColorIcon },
+    { id: 'paybill', label: t('services.payBill'), icon: PayBillColorIcon },
+    { id: 'addmoney', label: t('services.addMoney'), icon: AddMoneyColorIcon },
+    { id: 'savings', label: t('services.savings'), icon: SavingsColorIcon },
+    // { id: 'transfer', label: t('services.fundTransfer'), icon: IoSwapHorizontalOutline },
+    { id: 'request', label: t('services.requestMoney'), icon: RequestMoneyColorIcon },
+    // { id: 'payment', label: t('services.makePayment'), icon: IoQrCodeOutline },
   ];
 
   const safetyItems = [
-    { id: 'guardian', label: t('safety.guardianMode'), icon: GuardianColorIcon, color: 'bg-blue-50 dark:bg-blue-950/40' },
-    { id: 'checkMessage', label: t('safety.checkMessage'), icon: CheckMessageColorIcon, color: 'bg-sky-50 dark:bg-sky-950/40' },
-    { id: 'reminders', label: t('safety.reminders'), icon: RemindersColorIcon, color: 'bg-red-50 dark:bg-red-950/40' },
+    { id: 'guardian', label: t('safety.guardianMode'), icon: GuardianColorIcon },
+    // checkMessage hidden from New Features as requested
+    { id: 'reminders', label: t('safety.reminders'), icon: RemindersColorIcon },
     // Duplicate AI Copilot removed from safety section; persistent AI Copilot is in the bottom navigation bar
-    // { id: 'aiAssistant', label: t('safety.aiAssistant'), icon: RiRobot2Line, color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50', action: onOpenAgent },
-    { id: 'scheduledRules', label: t('safety.scheduledRules'), icon: ScheduledRulesColorIcon, color: 'bg-emerald-50 dark:bg-emerald-950/40' },
-    { id: 'groupBill', label: t('safety.groupBill'), icon: GroupBillColorIcon, color: 'bg-orange-50 dark:bg-orange-950/40' },
+    // { id: 'aiAssistant', label: t('safety.aiAssistant'), icon: RiRobot2Line, action: onOpenAgent },
+    { id: 'scheduledRules', label: t('safety.scheduledRules'), icon: ScheduledRulesColorIcon },
+    { id: 'groupBill', label: t('safety.groupBill'), icon: GroupBillColorIcon },
   ].filter((item) => {
     // Hide Guardian Mode for Child accounts
     if (user?.accountType === 'CHILD' && item.id === 'guardian') {
@@ -68,8 +67,8 @@ export function Home({ onSelectService, onSelectSafety, onOpenAgent }) {
                 onClick={() => onSelectService?.(item.id)}
                 className="flex flex-col items-center justify-center p-2 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/60 active:scale-95 transition-all text-center group"
               >
-                <div className={`w-12 h-12 rounded-2xl ${item.color} flex items-center justify-center mb-1.5 shadow-sm group-hover:scale-105 transition-transform`}>
-                  <Icon className="w-7 h-7" />
+                <div className="w-12 h-12 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
+                  <Icon className="w-9 h-9" />
                 </div>
                 <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 leading-snug line-clamp-2">
                   {item.label}
@@ -91,19 +90,19 @@ export function Home({ onSelectService, onSelectSafety, onOpenAgent }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-4 gap-y-4 gap-x-2">
           {safetyItems.map((item) => {
             const Icon = item.icon;
             return (
               <button
                 key={item.id}
                 onClick={() => item.action ? item.action() : onSelectSafety?.(item.id)}
-                className="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-surface-light dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-800/80 active:scale-95 transition-all text-center group"
+                className="flex flex-col items-center justify-center p-2 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/60 active:scale-95 transition-all text-center group"
               >
-                <div className={`w-10 h-10 rounded-xl ${item.color} flex items-center justify-center mb-1.5 shadow-sm group-hover:scale-105 transition-transform`}>
-                  <Icon className="w-6 h-6" />
+                <div className="w-12 h-12 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
+                  <Icon className="w-8 h-8" />
                 </div>
-                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 leading-snug">
+                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 leading-snug line-clamp-2">
                   {item.label}
                 </span>
               </button>
@@ -132,12 +131,12 @@ export function Home({ onSelectService, onSelectSafety, onOpenAgent }) {
         {/* Demo reminder item */}
         <div className="bg-white dark:bg-slate-800/90 rounded-2xl p-3 shadow-sm border border-yellow-100 dark:border-slate-700/60 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-400 flex items-center justify-center font-bold text-sm">
-              DPDC
+            <div className="w-10 h-10 flex items-center justify-center">
+              <PayBillColorIcon className="w-8 h-8" />
             </div>
             <div>
               <p className="text-xs font-bold text-slate-900 dark:text-white">বিদ্যুৎ বিল (Electricity Bill)</p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">মেয়াদ: আগামীকাল (Due: Tomorrow)</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">DPDC • মেয়াদ: আগামীকাল (Due: Tomorrow)</p>
             </div>
           </div>
           <div className="text-right">

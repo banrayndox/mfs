@@ -47,6 +47,73 @@ import { computeCanonicalActionHash } from './auth.service.js';
 import { emitToUser } from './socket.service.js';
 import { validateFactNumbers } from './aiTip.service.js';
 import logger from '../utils/logger.js';
+import {
+  convertBengaliDigits,
+  convertNumberWords,
+  normalizeInput,
+  extractAmountInPoisha as extractAmountInPoishaModular,
+} from './copilot/inputNormalizer.js';
+import {
+  getTaskState,
+  updateTaskState,
+  clearActiveTask,
+  isConfirmation,
+  isCancellation,
+  detectUserCorrection,
+  extractFollowUpParameters,
+  MFS_INTENT_SCHEMAS,
+} from './copilot/taskStateManager.js';
+import {
+  emitCopilotEvent,
+  COPILOT_EVENTS,
+} from './copilot/copilotEventBus.js';
+import {
+  resolveRecipient as resolveRecipientModular,
+  normalizeBdPhone,
+  BN_TO_EN_NAMES,
+} from './copilot/entityResolver.js';
+import {
+  validateTransactionRules,
+  validateGroupBillSplit,
+  calculateCashOutFee,
+} from './copilot/ruleEngine.js';
+import {
+  preparePendingConfirmation,
+  formatConfirmationPrompt as formatConfirmationPromptModular,
+} from './copilot/confirmationManager.js';
+import {
+  planIntent,
+  evaluateSecurityBoundaries,
+} from './copilot/intentPlanner.js';
+import {
+  executePendingActionTool,
+  executeReadOnlyTool,
+} from './copilot/toolExecutor.js';
+import {
+  recordCopilotAudit,
+  logSecurityBlocked,
+  logToolPlanned,
+  logConfirmationRequested,
+  logExecutionCompleted,
+} from './copilot/auditLogger.js';
+import {
+  formatClarificationResponse,
+  formatConfirmationPrompt,
+  formatSecurityRejection,
+} from './copilot/responseGenerator.js';
+import {
+  rememberFact,
+  recallMemories,
+  forgetFact,
+  clearUserMemory,
+  resolveAliasRecipient,
+  resolveUtilityAccount,
+  saveConversationMessage,
+  getConversationHistory,
+  clearConversationHistory,
+  getMemoryContextSummary,
+} from './copilot/memory.service.js';
+import { routeToDomainAgent } from './copilot/domainAgents/domainRouter.js';
 
 export { formatBdt };
 
@@ -178,13 +245,22 @@ export function classifyIntent(text) {
 
   // 2. Application Control: Logout
   if (
-    lower === 'logout' ||
-    lower === 'log out' ||
-    lower === 'log me out' ||
-    lower === 'লগআউট' ||
-    lower === 'লগ আউট' ||
-    lower.includes('লগআউট করো') ||
-    lower.includes('সাইন আউট')
+    lower.includes('logout') ||
+    lower.includes('log out') ||
+    lower.includes('log me out') ||
+    lower.includes('sign me out') ||
+    lower.includes('sign out') ||
+    lower.includes('signout') ||
+    lower.includes('লগআউট') ||
+    lower.includes('লগ আউট') ||
+    lower.includes('বের হতে চাই') ||
+    lower.includes('বের করে দাও') ||
+    lower.includes('বের হয়ে যাও') ||
+    lower.includes('account থেকে বের') ||
+    lower.includes('সাইন আউট') ||
+    lower.includes('sessionটা বন্ধ') ||
+    lower.includes('সেশন বন্ধ') ||
+    lower.includes('session বন্ধ')
   ) {
     return { type: 'app_logout' };
   }
@@ -231,7 +307,21 @@ export function classifyIntent(text) {
   if (
     lower.includes('open guardian') ||
     lower.includes('guardian mode') ||
-    lower.includes('গার্ডিয়ান মোড খোলো')
+    lower.includes('guardians') ||
+    lower.includes('guardian খোলো') ||
+    lower.includes('গার্ডিয়ান মোড') ||
+    lower.includes('গার্ডিয়ান খোলো') ||
+    lower.includes('গার্ডিয়ান মোড') ||
+    lower.includes('গার্ডিয়ান খোলো')
+  ) {
+    return { type: 'app_open_guardian' };
+  }
+  if (
+    lower.includes('open more') ||
+    lower.includes('go to more') ||
+    lower.includes('settings') ||
+    lower.includes('সেটিংস') ||
+    lower.includes('আরো অপশন')
   ) {
     return { type: 'app_navigate', path: '/more' };
   }
@@ -368,7 +458,8 @@ export function classifyIntent(text) {
   if (
     (lower.includes('savings goal') || lower.includes('save') || lower.includes('সঞ্চয় লক্ষ্য') || lower.includes('জমাতে চাই') || lower.includes('নতুন লক্ষ্য') || lower.includes('savings plan') || lower.includes('সেভিংস প্ল্যান') || lower.includes('সঞ্চয় পরিকল্পনা') || lower.includes('সেভিংস গোল') || lower.includes('ডিপিএস') || lower.includes('dps')) &&
     (lower.includes('goal') || lower.includes('লক্ষ্য') || lower.includes('month') || lower.includes('মাস') || lower.includes('week') || lower.includes('সপ্তাহ') || lower.includes('plan') || lower.includes('পরিকল্পনা') || lower.includes('laptop') || lower.includes('ল্যাপটপ') || lower.includes('for my') || lower.includes('for a') || lower.includes('জন্য') || /\d+/.test(lower)) &&
-    !lower.includes('%') && !lower.includes('percent') && !lower.includes('পার্সেন্ট') && !lower.includes('round-up') && !lower.includes('round up')
+    !lower.includes('%') && !lower.includes('percent') && !lower.includes('পার্সেন্ট') && !lower.includes('round-up') && !lower.includes('round up') &&
+    !lower.includes('when ') && !lower.includes('if ') && !lower.includes('যখন') && !lower.includes('টাকা ঢুকলে') && !lower.includes('টাকা আসলে') && !lower.startsWith('every ')
   ) {
     return { type: 'create_savings_goal' };
   }
@@ -446,6 +537,96 @@ export function classifyIntent(text) {
     lower.includes('কেনার জন্য টাকা জমাচ্ছি')
   ) {
     return { type: 'remember_financial_goal' };
+  }
+
+  // 20b. Memory: Recall / Query remembered information
+  if (
+    lower.includes('what do you remember') ||
+    lower.includes('what do you know about me') ||
+    lower.includes('show my memory') ||
+    lower.includes('show memories') ||
+    lower.includes('show remembered') ||
+    lower.includes('list memories') ||
+    lower.includes('what are my saved') ||
+    lower.includes('কী মনে রেখেছো') ||
+    lower.includes('কী জানো আমার সম্পর্কে') ||
+    lower.includes('মেমোরি দেখাও') ||
+    lower.includes('সংরক্ষিত তথ্য')
+  ) {
+    return { type: 'recall_memory' };
+  }
+
+  // 20c. Memory: Clear all memories
+  if (
+    lower.includes('clear all memory') ||
+    lower.includes('clear my memory') ||
+    lower.includes('clear memory') ||
+    lower.includes('delete all memory') ||
+    lower.includes('মেমোরি মুছে ফেলো') ||
+    lower.includes('সব মেমোরি মুছে ফেলো') ||
+    lower.includes('সব তথ্য মুছে ফেলো') ||
+    lower.includes('সব তথ্য ভুলে যাও')
+  ) {
+    return { type: 'clear_memory' };
+  }
+
+  // 20d. Memory: Forget specific fact
+  if (
+    lower.startsWith('forget ') ||
+    lower.startsWith('forget that ') ||
+    lower.includes('forget that') ||
+    lower.includes('delete fact') ||
+    lower.includes('remove memory') ||
+    lower.includes('delete memory') ||
+    lower.includes('ভুলে যাও') ||
+    (lower.includes('মুছে ফেলো') && (lower.includes('তথ্য') || lower.includes('নোট') || lower.includes('মেমোরি')))
+  ) {
+    return { type: 'forget_memory' };
+  }
+
+  // 20e. Memory: Remember new fact, relationship alias, utility account, or preference
+  const isExplicitRemember =
+    lower.startsWith('remember ') ||
+    lower.startsWith('remember that ') ||
+    lower.includes('remember that') ||
+    lower.startsWith('save note') ||
+    lower.startsWith('save fact') ||
+    lower.startsWith('note that') ||
+    lower.startsWith('keep in mind that') ||
+    lower.startsWith('keep in mind') ||
+    lower.startsWith('মনে রাখো ') ||
+    lower.startsWith('মনে রেখো ') ||
+    lower.includes('মনে রাখো যে') ||
+    lower.includes('মনে রেখো যে') ||
+    lower.startsWith('নোট করো');
+
+  const isImplicitKinship =
+    !lower.includes('send') &&
+    !lower.includes('pathao') &&
+    !lower.includes('পাঠাও') &&
+    !lower.includes('pay ') &&
+    !lower.includes('পে ') &&
+    !/\d{4,}/.test(lower) &&
+    (
+      lower.includes('is my brother') ||
+      lower.includes('is my sister') ||
+      lower.includes('is my friend') ||
+      lower.includes('is my father') ||
+      lower.includes('is my mother') ||
+      lower.includes('is my wife') ||
+      lower.includes('is my husband') ||
+      lower.includes('is my landlord') ||
+      lower.includes('আমার ভাই') ||
+      lower.includes('আমার বোন') ||
+      lower.includes('আমার বাবা') ||
+      lower.includes('আমার মা') ||
+      lower.includes('আমার স্ত্রী') ||
+      lower.includes('আমার বন্ধু') ||
+      lower.includes('আমার বাড়িওয়ালা')
+    );
+
+  if (isExplicitRemember || isImplicitKinship) {
+    return { type: 'remember_fact' };
   }
 
   // 21. Savings Progress Query: "Show my savings progress"
@@ -553,18 +734,21 @@ export function classifyIntent(text) {
   }
 
   // 24b. Group Bill Creation Intent (Natural Language)
-  if (
-    (lower.includes('create') || lower.includes('make') || lower.includes('তৈরি') || lower.includes('বানাও') || lower.includes('খোলো') || lower.includes('করো')) &&
-    (lower.includes('group bill') || lower.includes('গ্রুপ বিল') || lower.includes('bill split') || lower.includes('বিল স্প্লিট') || lower.includes('split bill') || lower.includes('group split'))
-  ) {
-    return { type: 'create_group_bill' };
+  if (lower.startsWith('split ') || (lower.includes('split') && !lower.includes('group bill') && !lower.startsWith('create'))) {
+    if (!lower.includes('status') && !lower.includes('who owes') && !lower.includes('বাকি')) {
+      return { type: 'split_bill' };
+    }
   }
+
   if (
-    (lower.includes('group bill') || lower.includes('গ্রুপ বিল') || lower.includes('bill split') || lower.includes('বিল স্প্লিট')) &&
-    (/\d+/.test(lower) || lower.includes('with') || lower.includes('সাথে')) &&
-    !lower.includes('status') && !lower.includes('who owes') && !lower.includes('বাকি')
+    ((lower.includes('create') || lower.includes('make') || lower.includes('তৈরি') || lower.includes('বানাও') || lower.includes('খোলো') || lower.includes('করো')) &&
+      (lower.includes('group bill') || lower.includes('গ্রুপ বিল') || lower.includes('bill split') || lower.includes('বিল স্প্লিট') || lower.includes('split bill') || lower.includes('group split'))) ||
+    ((lower.includes('group bill') || lower.includes('গ্রুপ বিল') || lower.includes('bill split') || lower.includes('বিল স্প্লিট')) &&
+      (/\d+/.test(lower) || lower.includes('with') || lower.includes('সাথে')))
   ) {
-    return { type: 'create_group_bill' };
+    if (!lower.includes('status') && !lower.includes('who owes') && !lower.includes('বাকি')) {
+      return { type: 'create_group_bill' };
+    }
   }
 
   // 25. Group Bill / Split Bill Query
@@ -581,18 +765,25 @@ export function classifyIntent(text) {
     return { type: 'group_bill_query' };
   }
 
-  // 26. Payment Requests Query
+  // 26. Payment Requests Query (List)
   if (
     lower.includes('pending request') ||
     lower.includes('who owes me') ||
-    lower.includes('request money from') ||
-    lower.includes('টাকা চাও') ||
-    lower.includes('রিকোয়েস্ট দেখাও')
+    lower.includes('রিকোয়েস্ট দেখাও') ||
+    lower.includes('রিকোয়েস্টের তালিকা')
   ) {
     return { type: 'requests_list' };
   }
 
-  // 26b. Guardian Natural Language Approval Intent
+  // 26b. Create Individual Payment Request
+  if (
+    (lower.startsWith('request ') || lower.includes('request money') || lower.includes('টাকা রিকোয়েস্ট') || lower.includes('টাকা চাও') || lower.includes('টাকা পাঠাতে বলো')) &&
+    !lower.includes('group') && !lower.includes('গ্রুপ')
+  ) {
+    return { type: 'request_money' };
+  }
+
+  // 26c. Guardian Natural Language Approval Intent
   if (
     (lower.includes('approve') || lower.includes('অনুমোদন') || lower.includes('অ্যাপ্রুভ')) &&
     (lower.includes('child') || lower.includes('son') || lower.includes('daughter') || lower.includes('ward') ||
@@ -600,6 +791,23 @@ export function classifyIntent(text) {
      lower.includes('লেনদেন') || lower.includes('pending') || lower.includes('পেন্ডিং') || lower.includes('payment'))
   ) {
     return { type: 'guardian_approve' };
+  }
+
+  // 26d. Guardian Setup / Add Child Intent
+  if (
+    lower.includes('child add') ||
+    lower.includes('child account') ||
+    lower.includes('add guardian') ||
+    lower.includes('set guardian') ||
+    lower.includes('সন্তান যুক্ত') ||
+    lower.includes('বাচ্চা যুক্ত') ||
+    lower.includes('অভিভাবক যুক্ত') ||
+    lower.includes('গার্ডিয়ান যুক্ত') ||
+    lower.includes('গার্ডিয়ান সেট') ||
+    (lower.includes('guardian') && (lower.includes('add') || lower.includes('যুক্ত') || lower.includes('set'))) ||
+    (lower.includes('child') && (lower.includes('add') || lower.includes('যুক্ত')))
+  ) {
+    return { type: 'guardian_mode' };
   }
 
   // 27. Guardian Management Queries & Status
@@ -734,6 +942,16 @@ export function classifyIntent(text) {
     return { type: 'knowledge' };
   }
 
+  // 36b. Mobile Recharge Intent
+  if (
+    lower.startsWith('recharge') ||
+    lower.includes('recharge ') ||
+    lower.includes('রিচার্জ') ||
+    lower.includes('মোবাইল রিচার্জ')
+  ) {
+    return { type: 'mobile_recharge' };
+  }
+
   // 37. Immediate Financial Transaction Intents (Send, Cash Out, Bill Pay, Recharge, Add Money in Bangla, Banglish & English)
   if (
     lower.startsWith('send ') ||
@@ -769,7 +987,7 @@ export function classifyIntent(text) {
     lower.includes('nesco') ||
     ((lower.includes('bill') || lower.includes('বিল') || lower.includes('বিদ্যুৎ') || lower.includes('পানি') || lower.includes('গ্যাস') || lower.includes('electricity')) &&
       (lower.includes('pay') || lower.includes('দাও') || lower.includes('পরিশোধ') || lower.includes('দেওয়া') || /\d+/.test(lower))) ||
-    ((lower.includes('dao') || lower.includes('দাও')) &&
+    (!lower.includes('limit') && !lower.includes('সীমা') && (lower.includes('dao') || lower.includes('দাও')) &&
       (lower.includes('taka') || lower.includes('টাকা') || lower.includes('friend') || lower.includes('ke') || lower.includes('কে') || /\d+/.test(lower))) ||
     (lower.includes('send') && (/\d+/.test(lower) || lower.includes('rahim') || lower.includes('to')))
   ) {
@@ -785,8 +1003,9 @@ export function classifyIntent(text) {
  */
 export function extractExplicitAmountPoisha(text) {
   if (!text) return null;
+  const wordConverted = convertNumberWords(text);
   const bnToEnMap = { '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4', '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9' };
-  let normalized = text.replace(/[০-৯]/g, (d) => bnToEnMap[d]);
+  let normalized = wordConverted.replace(/[০-৯]/g, (d) => bnToEnMap[d]);
 
   // Strip out commas in numbers e.g. "10,000" or "5,000"
   normalized = normalized.replace(/,/g, '');
@@ -837,6 +1056,19 @@ function getOperatorFromPhone(phone) {
 }
 
 /**
+ * Helper to get name search candidates including transliterations.
+ */
+export function getNameTargets(name) {
+  if (!name) return [];
+  const trimmed = name.trim();
+  const lower = trimmed.toLowerCase();
+  const transliterated = BN_TO_EN_NAMES[trimmed] || BN_TO_EN_NAMES[lower];
+  const list = [trimmed];
+  if (transliterated) list.push(transliterated);
+  return list;
+}
+
+/**
  * Extract recipient name or phone from natural language text
  */
 export async function resolveRecipient(text, senderUserId) {
@@ -855,9 +1087,27 @@ export async function resolveRecipient(text, senderUserId) {
     };
   }
 
+  // 1b. Check User Memory for Contact Aliases (e.g. "brother", "bhai", "ভাই", "landlord")
+  if (senderUserId) {
+    try {
+      const aliasMatch = await resolveAliasRecipient({ userId: senderUserId, aliasQuery: text });
+      if (aliasMatch && (aliasMatch.phone || aliasMatch.user)) {
+        return {
+          phone: aliasMatch.phone || (aliasMatch.user ? aliasMatch.user.phone : null),
+          name: aliasMatch.name,
+          isKnown: Boolean(aliasMatch.user || aliasMatch.phone),
+          user: aliasMatch.user || null,
+          relationship: aliasMatch.relationship,
+        };
+      }
+    } catch (err) {
+      logger.warn({ err: err.message }, 'Failed to resolve recipient from memory alias');
+    }
+  }
+
   // 2. Extract potential recipient candidates from text:
   // e.g. "to Rahim", "প্রাপক রহিম"
-  const toMatch = text.match(/\b(?:to|প্রাপক)\s+([A-Za-z\u0980-\u09FF]{2,})/i);
+  const toMatch = text.match(/(?:^|\s)(?:to|প্রাপক)\s+([A-Za-z\u0980-\u09FF]{2,})/i);
   let explicitCandidate = null;
   if (toMatch) {
     const word = toMatch[1].trim();
@@ -866,8 +1116,16 @@ export async function resolveRecipient(text, senderUserId) {
     }
   }
 
+  const kacheMatch = text.match(/([A-Za-z\u0980-\u09FF]{2,})\s*(?:-এর|এর|ের|র|-er|er)?\s+(?:কাছে|kache)/i);
+  if (kacheMatch) {
+    const word = kacheMatch[1].trim().replace(/(?:-এর|এর|ের|র|-er|er)$/i, '');
+    if (!['send', 'taka', 'money', 'bdt', 'tk', 'pay', 'cash', 'amar', 'আমার', 'koto', 'kot', 'bill', 'save', 'koro', 'করো'].includes(word.toLowerCase())) {
+      explicitCandidate = explicitCandidate || word;
+    }
+  }
+
   // Next, check "<Name> ke" or "<Name>ke" or "<Name>কে" or "<Name>-কে" or "<Name> er" or "<Name>রে"
-  const keMatch = text.match(/\b([A-Za-z\u0980-\u09FF]{2,})(?:\s*-\s*|\s+)?(?:ke|কে|re|রে|er|এর)\b/i);
+  const keMatch = text.match(/(?:^|\s)([A-Za-z\u0980-\u09FF]{2,})(?:\s*-\s*|\s*)?(?:ke|কে|re|রে|er|এর)(?:[\s,.\?!;:]|$)/i);
   if (keMatch) {
     const word = keMatch[1].trim();
     if (!['send', 'taka', 'money', 'bdt', 'tk', 'pay', 'cash', 'amar', 'আমার', 'koto', 'kot', 'bill', 'save', 'koro', 'করো'].includes(word.toLowerCase())) {
@@ -897,10 +1155,12 @@ export async function resolveRecipient(text, senderUserId) {
       continue;
     }
 
-    // Try exact name match
+    const targets = getNameTargets(cleanWord);
+
+    // Try exact name match with transliterations
     let matchedUser = await User.findOne({
       _id: { $ne: senderUserId },
-      name: { $regex: new RegExp(`^${cleanWord}$`, 'i') },
+      $or: targets.map((t) => ({ name: { $regex: new RegExp(`^${t}$`, 'i') } })),
       status: 'active',
     });
 
@@ -908,7 +1168,7 @@ export async function resolveRecipient(text, senderUserId) {
     if (!matchedUser) {
       matchedUser = await User.findOne({
         _id: { $ne: senderUserId },
-        name: { $regex: new RegExp(`\\b${cleanWord}\\b`, 'i') },
+        $or: targets.map((t) => ({ name: { $regex: new RegExp(`\\b${t}\\b`, 'i') } })),
         status: 'active',
       });
     }
@@ -926,11 +1186,20 @@ export async function resolveRecipient(text, senderUserId) {
   // If candidate was identified (e.g. "friend", "UnknownPerson") but not found in DB
   if (explicitCandidate) {
     const cleanCand = explicitCandidate.replace(/(?:-?ke|-?কে|-?re|-?রে|-?te|-?তে|-?er|-?এর|-?e|-?এ)$/i, '');
-    const matchedUser = await User.findOne({
+    const targets = getNameTargets(cleanCand);
+    let matchedUser = await User.findOne({
       _id: { $ne: senderUserId },
-      name: { $regex: new RegExp(cleanCand, 'i') },
+      $or: targets.map((t) => ({ name: { $regex: new RegExp(`^${t}$`, 'i') } })),
       status: 'active',
     });
+
+    if (!matchedUser) {
+      matchedUser = await User.findOne({
+        _id: { $ne: senderUserId },
+        $or: targets.map((t) => ({ name: { $regex: new RegExp(`\\b${t}\\b`, 'i') } })),
+        status: 'active',
+      });
+    }
 
     if (matchedUser) {
       return {
@@ -1019,8 +1288,33 @@ export function splitMultiIntentClauses(text) {
   if (classifyIntent(text).type === 'injection') {
     return [text];
   }
+  const lowerText = text.toLowerCase();
+  // If text is a composite child/guardian command with limit, do not split
+  if (
+    (lowerText.includes('child') || lowerText.includes('guardian') || lowerText.includes('সন্তান') || lowerText.includes('বাচ্চা') || lowerText.includes('অভিভাবক')) &&
+    (lowerText.includes('limit') || lowerText.includes('সীমা'))
+  ) {
+    return [text];
+  }
+
   const rawParts = text.split(/\s+(?:and|এবং|&|\+|আর)\s+/i).map((p) => p.trim()).filter(Boolean);
   if (rawParts.length > 1) {
+    // If any part is merely a parameter fragment (e.g., "limit 800", "with limit 500", "note ..."), do not split
+    const hasParamFragment = rawParts.some((p) => {
+      const pl = p.toLowerCase();
+      return (
+        pl.startsWith('limit ') ||
+        pl.startsWith('সীমা ') ||
+        pl.startsWith('with ') ||
+        pl.startsWith('for ') ||
+        pl.startsWith('note ') ||
+        pl.startsWith('নোট ')
+      );
+    });
+    if (hasParamFragment) {
+      return [text];
+    }
+
     const classified = rawParts.map((p) => classifyIntent(p));
     // If any clause is injection, do NOT split
     if (classified.some((c) => c.type === 'injection')) {
@@ -1045,60 +1339,95 @@ export function splitMultiIntentClauses(text) {
  * + App Control (Navigate, Logout, Change PIN)
  */
 export async function processAgentMessage({ userId, messageText, language = 'bn' }) {
+  // Persist incoming user message to persistent conversation history
+  try {
+    await saveConversationMessage({
+      userId,
+      sender: 'user',
+      text: messageText,
+      language,
+    });
+  } catch (err) {
+    logger.warn({ err: err.message }, 'Failed to persist user conversation message');
+  }
+
+  let response;
+
   // 1. Security Gate: Reject prompt injections cleanly ALWAYS FIRST
   const intent = classifyIntent(messageText);
   if (intent.type === 'injection') {
-    return {
+    response = {
       reply: language === 'bn'
         ? '⚠️ নিরাপত্তা সতর্কতা: অননুমোদিত নির্দেশ, সিস্টেম প্রম্পট বা পলিসি বাইপাসের চেষ্টা শনাক্ত হয়েছে। এই কমান্ডটি বাতিল করা হলো।'
         : '⚠️ Security Alert: Unauthorized instructions, system prompt, or policy override detected. This command has been rejected.',
       pendingAction: null,
       securityBlocked: true,
     };
-  }
-
-  // 2. Conflict Detection
-  const conflict = detectConflicts(messageText);
-  if (conflict.hasConflict) {
-    return {
-      reply: language === 'bn' ? `⚠️ ${conflict.reasonBn}` : `⚠️ ${conflict.reason}`,
-      pendingAction: null,
-      conflictDetected: true,
-    };
-  }
-
-  // 3. Multi-Intent Decomposition
-  const clauses = splitMultiIntentClauses(messageText);
-  if (clauses.length > 1) {
-    const results = [];
-    for (const clause of clauses) {
-      const res = await processSingleIntent({ userId, messageText: clause, language });
-      results.push(res);
-    }
-    const anyBlocked = results.some((r) => r.securityBlocked);
-    if (anyBlocked) {
-      return {
-        reply: language === 'bn'
-          ? '⚠️ নিরাপত্তা সতর্কতা: অননুমোদিত নির্দেশ, সিস্টেম প্রম্পট বা পলিসি বাইপাসের চেষ্টা শনাক্ত হয়েছে। এই কমান্ডটি বাতিল করা হলো।'
-          : '⚠️ Security Alert: Unauthorized instructions, system prompt, or policy override detected. This command has been rejected.',
+  } else {
+    // 2. Conflict Detection
+    const conflict = detectConflicts(messageText);
+    if (conflict.hasConflict) {
+      response = {
+        reply: language === 'bn' ? `⚠️ ${conflict.reasonBn}` : `⚠️ ${conflict.reason}`,
         pendingAction: null,
-        securityBlocked: true,
+        conflictDetected: true,
       };
+    } else {
+      // 3. Multi-Intent Decomposition
+      const clauses = splitMultiIntentClauses(messageText);
+      if (clauses.length > 1) {
+        const results = [];
+        for (const clause of clauses) {
+          const res = await processSingleIntent({ userId, messageText: clause, language });
+          results.push(res);
+        }
+        const anyBlocked = results.some((r) => r.securityBlocked);
+        if (anyBlocked) {
+          response = {
+            reply: language === 'bn'
+              ? '⚠️ নিরাপত্তা সতর্কতা: অননুমোদিত নির্দেশ, সিস্টেম প্রম্পট বা পলিসি বাইপাসের চেষ্টা শনাক্ত হয়েছে। এই কমান্ডটি বাতিল করা হলো।'
+              : '⚠️ Security Alert: Unauthorized instructions, system prompt, or policy override detected. This command has been rejected.',
+            pendingAction: null,
+            securityBlocked: true,
+          };
+        } else {
+          const combinedReply = results.map((r, i) => `${i + 1}. ${r.reply}`).join('\n\n');
+          const firstPending = results.find((r) => r.pendingAction)?.pendingAction || null;
+          response = {
+            reply: combinedReply,
+            multiIntentResults: results,
+            pendingAction: firstPending,
+          };
+        }
+      } else {
+        response = await processSingleIntent({ userId, messageText, language });
+      }
     }
-    const combinedReply = results.map((r, i) => `${i + 1}. ${r.reply}`).join('\n\n');
-    const firstPending = results.find((r) => r.pendingAction)?.pendingAction || null;
-    return {
-      reply: combinedReply,
-      multiIntentResults: results,
-      pendingAction: firstPending,
-    };
   }
 
-  return await processSingleIntent({ userId, messageText, language });
+  // Persist outgoing copilot reply to conversation history
+  if (response && response.reply) {
+    try {
+      await saveConversationMessage({
+        userId,
+        sender: 'copilot',
+        text: response.reply,
+        language,
+        intent: intent.type,
+        tool: response.tool || null,
+        pendingAction: response.pendingAction || null,
+        clientAction: response.clientAction || (response.logoutRequired ? { action: 'logout' } : (response.navigateTo ? { action: 'navigate', target: response.navigateTo } : null)),
+      });
+    } catch (err) {
+      logger.warn({ err: err.message }, 'Failed to persist copilot response message');
+    }
+  }
+
+  return response;
 }
 
 export async function processSingleIntent({ userId, messageText, language = 'bn' }) {
-  const intent = classifyIntent(messageText);
+  let intent = classifyIntent(messageText);
 
   // 1. Security Gate: Reject prompt injections cleanly
   if (intent.type === 'injection') {
@@ -1188,6 +1517,202 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
     };
   }
 
+  const taskState = getTaskState(userId);
+
+  // 1f. Multi-Turn Conversational Cancellation: "না", "cancel", "বাতিল", "দরকার নেই", "না পাঠিও না"
+  if (isCancellation(messageText) && (taskState.activeIntent || taskState.intent || taskState.preparedPendingAction)) {
+    const cancelledIntent = taskState.intent || taskState.activeIntent;
+    clearActiveTask(userId, 'cancelled');
+    emitCopilotEvent({
+      userId,
+      type: COPILOT_EVENTS.ACTION_CANCELLED,
+      intent: cancelledIntent,
+      message: 'Action cancelled by user',
+      actionState: getTaskState(userId),
+    });
+    return {
+      reply: language === 'bn'
+        ? 'আপনার অনুরোধটি বাতিল করা হয়েছে। অন্য কোনো লেনদেন বা তথ্যের জন্য নির্দেশ দিন।'
+        : 'Your request has been cancelled. How else can I assist you?',
+      pendingAction: null,
+      cancelled: true,
+    };
+  }
+
+  // 1g. Multi-Turn Conversational Confirmation: "হ্যাঁ", "confirm", "proceed", "yes", "করো", "পাঠাও"
+  if (isConfirmation(messageText) && (taskState.preparedPendingAction || taskState.status === 'ready' || taskState.status === 'awaiting_confirmation')) {
+    const action = taskState.preparedPendingAction;
+    emitCopilotEvent({
+      userId,
+      type: COPILOT_EVENTS.CONFIRMATION_REQUIRED,
+      intent: taskState.intent || taskState.activeIntent,
+      message: 'User confirmed action; awaiting authentication gate (PIN)',
+      actionState: taskState,
+    });
+    return {
+      reply: language === 'bn'
+        ? 'লেনদেনটি সম্পন্ন করতে অনুগ্রহ করে আপনার পিন (PIN) বা বায়োমেট্রিক প্রদান করুন।'
+        : 'Please enter your PIN or use biometric authentication to complete this transaction.',
+      pendingAction: action,
+      awaitingStepUp: true,
+      clientAction: taskState.clientAction || null,
+    };
+  }
+
+  // 1h. Multi-Turn Conversational Corrections & Parameter Accumulation
+  const lowerMsgText = messageText.toLowerCase().trim();
+  const correction = detectUserCorrection(messageText, taskState);
+
+  const isExplicitNewCommand =
+    (lowerMsgText.startsWith('create a') ||
+      lowerMsgText.startsWith('create ') ||
+      lowerMsgText.startsWith('send ') ||
+      lowerMsgText.startsWith('pay ') ||
+      lowerMsgText.startsWith('recharge ') ||
+      lowerMsgText.startsWith('cash out') ||
+      lowerMsgText.startsWith('add money') ||
+      lowerMsgText.startsWith('remember') ||
+      lowerMsgText.startsWith('what do you remember') ||
+      lowerMsgText.startsWith('show my memory') ||
+      lowerMsgText.startsWith('split') ||
+      lowerMsgText.startsWith('set ') ||
+      lowerMsgText.startsWith('enable ') ||
+      lowerMsgText.startsWith('pause') ||
+      lowerMsgText.startsWith('resume') ||
+      lowerMsgText.startsWith('deposit') ||
+      lowerMsgText.startsWith('when ') ||
+      lowerMsgText.startsWith('every ') ||
+      lowerMsgText.startsWith('request ') ||
+      lowerMsgText.includes('group bill')) &&
+    !isConfirmation(messageText) &&
+    !isCancellation(messageText) &&
+    !correction.isCorrection;
+
+  if (isExplicitNewCommand && (taskState.intent || taskState.status === 'ready' || taskState.preparedPendingAction)) {
+    clearActiveTask(userId);
+  }
+
+  let effectiveText = messageText;
+  if (correction.isCorrection) {
+    const activeWorkflow = taskState.intent || taskState.activeIntent;
+    const newParams = { ...(taskState.parameters || {}), ...(correction.updatedParams || {}) };
+    if (correction.updatedParams?.recipient && !correction.updatedParams?.recipientPhone) {
+      delete newParams.recipientPhone;
+    }
+    updateTaskState(userId, {
+      parameters: newParams,
+      accumulatedParams: newParams,
+    });
+    const updatedState = getTaskState(userId);
+    if (activeWorkflow === 'send_money' || taskState.activeTool === 'send_money') {
+      const recipient = correction.updatedParams?.recipient || updatedState.parameters.recipientName || updatedState.parameters.recipient || updatedState.parameters.recipientPhone || 'Rahim';
+      const amount = updatedState.parameters.amount || 500;
+      effectiveText = `Send ${amount} to ${recipient}`;
+    } else if (activeWorkflow === 'mobile_recharge' || taskState.activeTool === 'mobile_recharge') {
+      const recipient = updatedState.parameters.recipient || user?.phone;
+      const amount = updatedState.parameters.amount || 50;
+      const operator = updatedState.parameters.operator || '';
+      effectiveText = `Recharge ${amount} to ${recipient} ${operator}`;
+    } else if (activeWorkflow === 'cash_out' || taskState.activeTool === 'cash_out') {
+      const amount = updatedState.parameters.amount || 1000;
+      effectiveText = `Cash out ${amount}`;
+    } else if (activeWorkflow === 'pay_bill' || taskState.activeTool === 'pay_bill') {
+      const amount = updatedState.parameters.amount || 1000;
+      const biller = updatedState.parameters.billerId || 'DPDC';
+      effectiveText = `Pay bill ${amount} for ${biller}`;
+    } else if (activeWorkflow === 'add_money' || taskState.activeTool === 'add_money') {
+      const amount = updatedState.parameters.amount || 1000;
+      effectiveText = `Add money ${amount}`;
+    }
+  } else if ((taskState.status === 'collecting' || (taskState.missingParameters && taskState.missingParameters.length > 0) || (taskState.missingFields && taskState.missingFields.length > 0)) && (taskState.intent || taskState.activeIntent)) {
+    // Check if the user is providing the missing parameter (follow-up)
+    const followUpParams = extractFollowUpParameters(messageText, taskState);
+    if (Object.keys(followUpParams).length > 0) {
+      const activeWorkflow = taskState.intent || taskState.activeIntent;
+      updateTaskState(userId, {
+        parameters: { ...(taskState.parameters || {}), ...followUpParams },
+        accumulatedParams: { ...(taskState.accumulatedParams || {}), ...followUpParams },
+      });
+      const updatedState = getTaskState(userId);
+
+      // If still missing required fields, ask ONLY for remaining missing field
+      if (updatedState.missingParameters && updatedState.missingParameters.length > 0) {
+        emitCopilotEvent({
+          userId,
+          type: COPILOT_EVENTS.PARAM_COLLECTED,
+          intent: activeWorkflow,
+          message: `Collected parameter(s): ${Object.keys(followUpParams).join(', ')}`,
+          actionState: updatedState,
+        });
+
+        const nextMissing = updatedState.missingParameters[0];
+        let promptText = '';
+        if (nextMissing === 'amount') {
+          const target = updatedState.parameters.recipientName || updatedState.parameters.recipient || updatedState.parameters.billerId || '';
+          promptText = language === 'bn'
+            ? `${target ? target + '-কে ' : ''}কত টাকা পাঠাতে চান? অনুগ্রহ করে টাকার পরিমাণ উল্লেখ করুন (যেমন: ৫০০ টাকা)।`
+            : `How much would you like to ${activeWorkflow === 'mobile_recharge' ? 'recharge' : activeWorkflow === 'pay_bill' ? 'pay' : 'send'}${target ? ' to ' + target : ''}? Please specify the amount.`;
+        } else if (nextMissing === 'recipient' || nextMissing === 'phoneNumber') {
+          promptText = language === 'bn'
+            ? 'কাকে পাঠাতে চান? প্রাপকের মোবাইল নম্বর বা নাম উল্লেখ করুন।'
+            : 'Who is the recipient? Please specify the phone number or name.';
+        } else if (nextMissing === 'operator') {
+          promptText = language === 'bn'
+            ? 'কোন অপারেটরে রিচার্জ করবেন? (যেমন: গ্রামীণফোন, রবি, বাংলালিংক, এয়ারটেল, টেলিটক)'
+            : 'Which operator? (e.g. Grameenphone, Robi, Banglalink, Airtel, Teletalk)';
+        } else if (nextMissing === 'billerId') {
+          promptText = language === 'bn'
+            ? 'কোন প্রতিষ্ঠানের বিল পরিশোধ করতে চান? (যেমন: DPDC, DESCO, WASA, Titas)'
+            : 'Which utility biller? (e.g. DPDC, DESCO, WASA, Titas)';
+        } else {
+          promptText = language === 'bn'
+            ? `অনুগ্রহ করে ${nextMissing} উল্লেখ করুন।`
+            : `Please provide ${nextMissing}.`;
+        }
+
+        return {
+          reply: promptText,
+          pendingAction: null,
+          actionState: updatedState,
+        };
+      }
+
+      // All required fields collected! Synthesize effectiveText to run full validation
+      if (activeWorkflow === 'send_money' || taskState.activeTool === 'send_money') {
+        const recipient = updatedState.parameters.recipientPhone || updatedState.parameters.recipient || '01712345678';
+        const amount = updatedState.parameters.amount || 500;
+        effectiveText = `Send ${amount} to ${recipient}`;
+      } else if (activeWorkflow === 'mobile_recharge' || taskState.activeTool === 'mobile_recharge') {
+        const recipient = updatedState.parameters.recipient || user?.phone;
+        const amount = updatedState.parameters.amount || 50;
+        const operator = updatedState.parameters.operator || '';
+        effectiveText = `Recharge ${amount} to ${recipient} ${operator}`;
+      } else if (activeWorkflow === 'cash_out' || taskState.activeTool === 'cash_out') {
+        const amount = updatedState.parameters.amount || 1000;
+        effectiveText = `Cash out ${amount}`;
+      } else if (activeWorkflow === 'pay_bill' || taskState.activeTool === 'pay_bill') {
+        const amount = updatedState.parameters.amount || 1000;
+        const biller = updatedState.parameters.billerId || 'DPDC';
+        effectiveText = `Pay bill ${amount} for ${biller}`;
+      } else if (activeWorkflow === 'add_money' || taskState.activeTool === 'add_money') {
+        const amount = updatedState.parameters.amount || 1000;
+        effectiveText = `Add money ${amount}`;
+      } else if (activeWorkflow === 'guardian_mode' || taskState.activeTool === 'add_child_account') {
+        const targetPhone = updatedState.parameters.phoneNumber || updatedState.parameters.childPhone || followUpParams.phoneNumber || followUpParams.childPhone || messageText.match(/01[3-9]\d{8}/)?.[0] || '01712345678';
+        const limitPart = updatedState.parameters.dailyLimit ? ` limit ${updatedState.parameters.dailyLimit}` : '';
+        effectiveText = `add child ${targetPhone}${limitPart}`;
+      } else if (activeWorkflow === 'request_money' || taskState.activeTool === 'request_money') {
+        const targetPhone = updatedState.parameters.phoneNumber || updatedState.parameters.recipient || followUpParams.phoneNumber || followUpParams.recipient || '01712345678';
+        const amount = updatedState.parameters.amount || 500;
+        effectiveText = `request ${amount} from ${targetPhone}`;
+      }
+    }
+  }
+
+  if (effectiveText !== messageText) {
+    intent = classifyIntent(effectiveText);
+  }
+
   const user = await User.findById(userId);
   if (!user || user.status !== 'active') {
     return {
@@ -1197,13 +1722,56 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
   }
 
   const wallet = await Wallet.findOne({ userId, type: { $in: ['primary', 'agent'] } });
-  const balancePoisha = wallet ? wallet.balance : 0;
-  const rawExplicitAmount = extractExplicitAmountPoisha(messageText);
+  const balancePoisha = wallet ? (wallet.balance ?? wallet.balancePoisha ?? 0) : 0;
+  const rawExplicitAmount = extractExplicitAmountPoisha(effectiveText);
   const amountPoisha = rawExplicitAmount !== null ? rawExplicitAmount : 50000;
   const bdtAmount = amountPoisha / 100;
 
   // Realtime notification that Copilot is reasoning
   emitToUser(userId, 'copilot:action_started', { query: messageText });
+
+  // 1i. Domain Agent Orchestration (Savings, Guardian, Group Bill, Schedule/Rule)
+  // Operates via structured JSON payloads, slot filling and specialized domain handlers.
+  if (
+    intent.type !== 'app_logout' &&
+    intent.type !== 'app_change_pin' &&
+    intent.type !== 'remember_fact' &&
+    intent.type !== 'recall_memory' &&
+    intent.type !== 'forget_memory' &&
+    intent.type !== 'create_group_bill' &&
+    intent.type !== 'split_bill' &&
+    intent.type !== 'guardian_approve' &&
+    intent.type !== 'financial_health' &&
+    intent.type !== 'category_spending' &&
+    intent.type !== 'biggest_transactions' &&
+    intent.type !== 'reminders_list' &&
+    intent.type !== 'reminder_cancel' &&
+    intent.type !== 'schedules_list' &&
+    intent.type !== 'schedule_cancel' &&
+    intent.type !== 'rules_list' &&
+    intent.type !== 'rule_toggle' &&
+    !(intent.type === 'scheduled' && (effectiveText || messageText).toLowerCase().includes('remind me'))
+  ) {
+    const domainResult = await routeToDomainAgent({
+      userId,
+      messageText: effectiveText || messageText,
+      language,
+      user,
+      wallet,
+      taskState,
+      intent,
+    });
+
+    if (domainResult && domainResult.handled) {
+      return {
+        ...domainResult,
+        reply: domainResult.reply,
+        clientAction: domainResult.clientAction || null,
+        pendingAction: domainResult.pendingAction || null,
+        actionState: domainResult.actionState || getTaskState(userId),
+      };
+    }
+  }
 
   // ==========================================
   // APP CONTROL TOOLS (Logout, PIN, Navigate)
@@ -1227,6 +1795,20 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
         ? 'নিরাপত্তার স্বার্থে চ্যাটে পিন নেওয়া হয় না। নিরাপদ পিন পরিবর্তন উইন্ডো খোলা হচ্ছে...'
         : 'For security, PINs are never accepted inside chat. Opening the secure PIN change modal...',
       clientAction: { type: 'open_modal', modal: 'change_pin' },
+      pendingAction: null,
+    };
+  }
+
+  // 3b. App Control: Open Guardian Mode Modal
+  if (
+    intent.type === 'app_open_guardian' ||
+    (intent.type === 'open_modal' && (intent.modal === 'guardian' || intent.parameters?.modal === 'guardian'))
+  ) {
+    return {
+      reply: language === 'bn'
+        ? 'গার্ডিয়ান মোড ও চাইল্ড অ্যাকাউন্ট ম্যানেজমেন্ট উইন্ডো খোলা হচ্ছে...'
+        : 'Opening Guardian Mode controls and child account settings...',
+      clientAction: { type: 'open_modal', modal: 'guardian' },
       pendingAction: null,
     };
   }
@@ -1541,6 +2123,7 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
       reply: language === 'bn'
         ? '⏸️ আপনার স্বয়ংক্রিয় মাইক্রো-সেভিংস সাময়িকভাবে স্থগিত (Paused) করা হয়েছে।'
         : '⏸️ Your automatic micro-savings has been paused.',
+      microSavings: { isPaused: true, paused: true },
       pendingAction: null,
     };
   }
@@ -1550,6 +2133,7 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
       reply: language === 'bn'
         ? '▶️ আপনার স্বয়ংক্রিয় মাইক্রো-সেভিংস পুনরায় সক্রিয় (Resumed) করা হয়েছে।'
         : '▶️ Your automatic micro-savings has been resumed.',
+      microSavings: { isPaused: false, paused: false },
       pendingAction: null,
     };
   }
@@ -1837,6 +2421,65 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
     };
   }
 
+  // 19b. Remember Fact / Contact Alias / Utility Account / Contextual Note
+  if (intent.type === 'remember_fact') {
+    let fact = messageText
+      .replace(/^(?:please\s+)?(?:remember\s+that|remember|save\s+note|save\s+fact|note\s+that|note|keep\s+in\s+mind\s+that|keep\s+in\s+mind)\s+/i, '')
+      .replace(/^(?:দয়া\s+করে\s+)?(?:মনে\s+রাখো\s+যে|মনে\s+রেখো\s+যে|মনে\s+রাখো|মনে\s+রেখো|নোট\s+করো)\s+/i, '')
+      .trim();
+
+    if (!fact) {
+      fact = messageText;
+    }
+
+    const res = await rememberFact({ userId, fact });
+    const reply = language === 'bn' ? res.summaryBn : res.summaryEn;
+    return {
+      reply,
+      pendingAction: null,
+      memoryResult: res,
+    };
+  }
+
+  // 19c. Recall Memory: "What do you remember about me?", "Show my memory"
+  if (intent.type === 'recall_memory') {
+    const res = await recallMemories({ userId });
+    const reply = language === 'bn' ? res.summaryBn : res.summaryEn;
+
+    return {
+      reply,
+      pendingAction: null,
+      memoryData: res,
+    };
+  }
+
+  // 19d. Forget Specific Fact: "Forget that Karim is my brother"
+  if (intent.type === 'forget_memory') {
+    let query = messageText
+      .replace(/^(?:please\s+)?(?:forget\s+that|forget|delete\s+fact|remove\s+memory|delete\s+memory)\s+/i, '')
+      .replace(/^(?:দয়া\s+করে\s+)?(?:ভুলে\s+যাও\s+যে|ভুলে\s+যাও|মুছে\s+ফেলো)\s+/i, '')
+      .trim();
+
+    const res = await forgetFact({ userId, query });
+    const reply = language === 'bn' ? res.summaryBn : res.summaryEn;
+    return {
+      reply,
+      pendingAction: null,
+      memoryResult: res,
+    };
+  }
+
+  // 19e. Clear All Memory: "Clear my memory"
+  if (intent.type === 'clear_memory') {
+    const res = await clearUserMemory({ userId });
+    const reply = language === 'bn' ? res.summaryBn : res.summaryEn;
+    return {
+      reply,
+      pendingAction: null,
+      memoryResult: res,
+    };
+  }
+
   // ==========================================
   // RAG / EXTERNAL KNOWLEDGE QUERIES
   // ==========================================
@@ -2100,7 +2743,7 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
   // ==========================================
 
   // 29a. Group Bill Creation (Natural Language)
-  if (intent.type === 'create_group_bill') {
+  if (intent.type === 'create_group_bill' || intent.type === 'split_bill') {
     if (rawExplicitAmount === null) {
       return {
         reply: language === 'bn'
@@ -2137,7 +2780,7 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
     let rawCandidates = [];
     const withMatch = messageText.match(/(?:with|সাথে)\s+([^.]+)/i);
     if (withMatch) {
-      const segment = withMatch[1];
+      let segment = withMatch[1].replace(/\s+(?:for|বাবদ|উদ্দেশ্যে)\s+.*$/i, '');
       const parts = segment.replace(/\b(?:and|এবং|o|ও)\b/gi, ',').split(',');
       for (const p of parts) {
         const cleaned = p.trim().replace(/[,\.?!;:()]/g, '');
@@ -2180,24 +2823,37 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
         });
       } else {
         const cleanName = cand.replace(/(?:-?ke|-?কে|-?re|-?রে|-?er|-?এর|-?e|-?এ|-?te|-?তে)$/i, '').trim();
+        const targets = getNameTargets(cleanName);
         matchedUser = await User.findOne({
           _id: { $ne: userId },
-          name: { $regex: new RegExp(`^${cleanName}$`, 'i') },
+          $or: targets.map((t) => ({ name: { $regex: new RegExp(`^${t}$`, 'i') } })),
           status: 'active',
         });
         if (!matchedUser) {
           matchedUser = await User.findOne({
             _id: { $ne: userId },
-            name: { $regex: new RegExp(`\\b${cleanName}\\b`, 'i') },
+            $or: targets.map((t) => ({ name: { $regex: new RegExp(`\\b${t}\\b`, 'i') } })),
             status: 'active',
           });
         }
 
         if (!matchedUser) {
+          const totalPeopleEst = Math.max(2, rawCandidates.length + 1);
+          const perPersonEst = Math.round((amountPoisha / 100) / totalPeopleEst);
           return {
             reply: language === 'bn'
               ? `'${cleanName}'-এর অ্যাকাউন্ট খুঁজে পাওয়া যায়নি। অনুগ্রহ করে '${cleanName}'-এর ১১ সংখ্যার মোবাইল নম্বর দিন।`
               : `Could not find an account for '${cleanName}'. Please provide their 11-digit phone number.`,
+            clientAction: {
+              type: 'open_modal',
+              modal: 'group_bill',
+              prefill: {
+                title: description,
+                totalAmount: String(amountPoisha / 100),
+                participants: rawCandidates.join(', '),
+                perPerson: String(perPersonEst),
+              },
+            },
             pendingAction: null,
           };
         }
@@ -2224,10 +2880,11 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
 
     const actionId = `grp-bill-${crypto.randomUUID()}`;
     const pendingArgs = {
-      totalAmountPoisha: totalRequestedPoisha,
+      totalAmountPoisha: amountPoisha,
       splitType: 'equal',
       participants: participantList,
       description,
+      requestedAmountPoisha: totalRequestedPoisha,
       originalBillAmountPoisha: amountPoisha,
     };
     const actionHash = computeCanonicalActionHash({
@@ -2263,6 +2920,44 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
       expiresAt: new Date(Date.now() + 5 * 60 * 1000),
     });
 
+    const clientAction = {
+      type: 'open_modal',
+      modal: 'group_bill',
+      prefill: {
+        defaultMode: 'group',
+        amount: String(amountPoisha / 100),
+        totalAmount: String(amountPoisha / 100),
+        perPerson: String(perPersonPoisha / 100),
+        description,
+      },
+    };
+
+    updateTaskState(userId, {
+      intent: 'group_bill',
+      activeIntent: 'group_bill',
+      activeTool: 'create_group_bill',
+      status: 'ready',
+      missingParameters: [],
+      missingFields: [],
+      parameters: {
+        total_amount: amountPoisha / 100,
+        totalAmountPoisha: amountPoisha,
+        description,
+        participants: participantList.map((p) => p.name),
+      },
+      preparedPendingAction: pending,
+      clientAction,
+    });
+
+    emitCopilotEvent({
+      userId,
+      type: COPILOT_EVENTS.ACTION_READY,
+      intent: 'group_bill',
+      message: `Group Bill prepared: ${formatBdt(amountPoisha)} for ${description}`,
+      actionState: getTaskState(userId),
+      persistNotification: true,
+    });
+
     return {
       reply: language === 'bn'
         ? `📋 '${description}' বাবদ ${formatBdt(amountPoisha)} বিলের হিসাব প্রস্তুত করা হয়েছে:\n` +
@@ -2276,6 +2971,8 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
           `• Requests to send:\n${breakdownLinesEn}\n\n` +
           `To create this group bill and send requests, please confirm below with your PIN.`,
       pendingAction: pending,
+      clientAction,
+      actionState: getTaskState(userId),
     };
   }
 
@@ -2356,8 +3053,229 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
     };
   }
 
+  // 29c. Guardian Setup / Add Child Intent
+  if (intent.type === 'guardian_mode') {
+    const taskStateNow = getTaskState(userId);
+    const phoneMatch = (effectiveText || messageText).match(/01[3-9]\d{8}/);
+    const targetPhone = phoneMatch ? phoneMatch[0] : (taskStateNow.parameters?.phoneNumber || taskStateNow.parameters?.childPhone || null);
+
+    // Extract custom limit if specified (e.g. "limit 800", "900 tk liimit die", "সীমা ৮০০", "800 tk")
+    const limitMatch =
+      (effectiveText || messageText).match(/(?:l+i+m+i+t|লিমিট|সীমা|দৈনিক সীমা|daily\s*limit)\s*[:=]?\s*(\d+)/i) ||
+      (effectiveText || messageText).match(/(\d+)\s*(?:tk|taka|টাকা)?\s*(?:l+i+m+i+t|সীমা|লিমিট)/i) ||
+      (effectiveText || messageText).match(/(?:l+i+m+i+t|লিমিট|সীমা)\s*(\d+)\s*(?:tk|taka|টাকা)?/i);
+    const customLimit = limitMatch ? parseInt(limitMatch[1], 10) : (taskStateNow.parameters?.dailyLimit || 500);
+
+    const clientAction = {
+      type: 'open_modal',
+      modal: 'guardian',
+      prefill: {
+        childPhone: targetPhone || '',
+        childName: 'Family Member',
+        dailyLimit: String(customLimit),
+      },
+    };
+
+    if (!targetPhone) {
+      updateTaskState(userId, {
+        intent: 'guardian_mode',
+        activeIntent: 'guardian_mode',
+        activeTool: 'add_child_account',
+        status: 'collecting',
+        requiredParameters: ['phoneNumber'],
+        missingParameters: ['phoneNumber'],
+        missingFields: ['phoneNumber'],
+        parameters: {
+          dailyLimit: customLimit,
+        },
+        accumulatedParams: {
+          dailyLimit: customLimit,
+        },
+        clientAction,
+      });
+      emitCopilotEvent({
+        userId,
+        type: COPILOT_EVENTS.MISSING_PARAMETER,
+        intent: 'guardian_mode',
+        message: 'Phone number missing for Guardian Mode',
+        actionState: getTaskState(userId),
+      });
+      return {
+        reply: language === 'bn'
+          ? `অভিভাবক বা সন্তানের মোবাইল নম্বরটি দিন (যেমন: 017XXXXXXXX)। সন্তান যুক্ত করতে উইন্ডো খোলা হচ্ছে (দৈনিক সীমা: ৳${customLimit})।`
+          : `Please provide the guardian or child phone number (e.g. 017XXXXXXXX). Opening Guardian controls with daily limit ৳${customLimit}.`,
+        clientAction,
+        pendingAction: null,
+        actionState: getTaskState(userId),
+      };
+    }
+
+    updateTaskState(userId, {
+      intent: 'guardian_mode',
+      activeIntent: 'guardian_mode',
+      activeTool: 'add_child_account',
+      status: 'ready',
+      missingParameters: [],
+      missingFields: [],
+      parameters: {
+        phoneNumber: targetPhone,
+        childPhone: targetPhone,
+        childName: 'Family Member',
+        dailyLimit: customLimit,
+      },
+      clientAction,
+    });
+
+    emitCopilotEvent({
+      userId,
+      type: COPILOT_EVENTS.ACTION_READY,
+      intent: 'guardian_mode',
+      message: `Guardian setup ready for ${targetPhone} with limit ৳${customLimit}`,
+      actionState: getTaskState(userId),
+      persistNotification: true,
+    });
+
+    return {
+      reply: language === 'bn'
+        ? `${targetPhone} নম্বরের জন্য দৈনিক ৳${customLimit} সীমার অভিভাবক নিয়ন্ত্রণ উইন্ডো খোলা হচ্ছে। আপনি সেখানে পিন ও সেটিংস নিশ্চিত করে যুক্ত করতে পারেন।`
+        : `Opening Guardian controls window for ${targetPhone} with daily limit ৳${customLimit}. You can set PIN to complete setup.`,
+      clientAction,
+      pendingAction: null,
+      actionState: getTaskState(userId),
+    };
+  }
+
+  // 29d. Individual Request Money
+  if (intent.type === 'request_money') {
+    const recipient = await resolveRecipient(effectiveText || messageText, userId);
+    if (!recipient && rawExplicitAmount === null) {
+      updateTaskState(userId, {
+        intent: 'request_money',
+        activeIntent: 'request_money',
+        activeTool: 'request_money',
+        status: 'collecting',
+        requiredParameters: ['recipient', 'amount'],
+        missingParameters: ['recipient', 'amount'],
+        missingFields: ['recipient', 'amount'],
+        parameters: {},
+        accumulatedParams: {},
+      });
+      emitCopilotEvent({
+        userId,
+        type: COPILOT_EVENTS.MISSING_PARAMETER,
+        intent: 'request_money',
+        message: 'Recipient and amount missing for Request Money',
+        actionState: getTaskState(userId),
+      });
+      return {
+        reply: language === 'bn'
+          ? 'কার কাছ থেকে কত টাকা রিকোয়েস্ট করতে চান? অনুগ্রহ করে প্রাপকের নাম বা নম্বর এবং পরিমাণ উল্লেখ করুন।'
+          : 'Who would you like to request money from and what amount? Please specify recipient and amount.',
+        pendingAction: null,
+      };
+    }
+    if (!recipient) {
+      updateTaskState(userId, {
+        intent: 'request_money',
+        activeIntent: 'request_money',
+        activeTool: 'request_money',
+        status: 'collecting',
+        requiredParameters: ['recipient', 'amount'],
+        missingParameters: ['recipient'],
+        missingFields: ['recipient'],
+        parameters: { amount: bdtAmount, amountPoisha },
+        accumulatedParams: { amount: bdtAmount, amountPoisha },
+      });
+      emitCopilotEvent({
+        userId,
+        type: COPILOT_EVENTS.MISSING_PARAMETER,
+        intent: 'request_money',
+        message: 'Recipient missing for Request Money',
+        actionState: getTaskState(userId),
+      });
+      return {
+        reply: language === 'bn'
+          ? 'কার কাছ থেকে টাকা রিকোয়েস্ট করতে চান? প্রাপকের মোবাইল নম্বর বা নাম উল্লেখ করুন।'
+          : 'Who would you like to request money from? Please specify the recipient phone number or name.',
+        pendingAction: null,
+      };
+    }
+    if (rawExplicitAmount === null) {
+      updateTaskState(userId, {
+        intent: 'request_money',
+        activeIntent: 'request_money',
+        activeTool: 'request_money',
+        status: 'collecting',
+        requiredParameters: ['recipient', 'amount'],
+        missingParameters: ['amount'],
+        missingFields: ['amount'],
+        parameters: { recipient: recipient.phone || recipient.name, recipientPhone: recipient.phone, recipientName: recipient.name },
+        accumulatedParams: { recipient: recipient.phone || recipient.name, recipientPhone: recipient.phone, recipientName: recipient.name },
+      });
+      emitCopilotEvent({
+        userId,
+        type: COPILOT_EVENTS.MISSING_PARAMETER,
+        intent: 'request_money',
+        message: 'Amount missing for Request Money',
+        actionState: getTaskState(userId),
+      });
+      return {
+        reply: language === 'bn'
+          ? `${recipient.name}-এর কাছ থেকে কত টাকা রিকোয়েস্ট করতে চান?`
+          : `How much would you like to request from ${recipient.name}?`,
+        pendingAction: null,
+      };
+    }
+
+    const clientAction = {
+      type: 'open_modal',
+      modal: 'request',
+      prefill: {
+        defaultMode: 'individual',
+        targetPhone: recipient.phone || '',
+        amount: String(amountPoisha / 100),
+        description: 'Money request via Copilot',
+      },
+    };
+
+    updateTaskState(userId, {
+      intent: 'request_money',
+      activeIntent: 'request_money',
+      activeTool: 'request_money',
+      status: 'ready',
+      missingParameters: [],
+      missingFields: [],
+      parameters: {
+        recipient: recipient.name,
+        recipientPhone: recipient.phone,
+        amountPoisha,
+        amount: bdtAmount,
+      },
+      clientAction,
+    });
+
+    emitCopilotEvent({
+      userId,
+      type: COPILOT_EVENTS.ACTION_READY,
+      intent: 'request_money',
+      message: `Request Money prepared: ${formatBdt(amountPoisha)} from ${recipient.name}`,
+      actionState: getTaskState(userId),
+      persistNotification: true,
+    });
+
+    return {
+      reply: language === 'bn'
+        ? `${recipient.name}-এর কাছ থেকে ${formatBdt(amountPoisha)} রিকোয়েস্ট পাঠানোর ফর্ম প্রস্তুত করা হয়েছে।`
+        : `Money request of ${formatBdt(amountPoisha)} from ${recipient.name} is ready.`,
+      clientAction,
+      pendingAction: null,
+      actionState: getTaskState(userId),
+    };
+  }
+
   // Determine immediate transaction intent type
-  const lowerMsg = messageText.toLowerCase();
+  const targetMsg = effectiveText || messageText;
+  const lowerMsg = targetMsg.toLowerCase();
 
   const isCashOut =
     intent.type === 'cash_out' ||
@@ -2365,9 +3283,9 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
       (lowerMsg.includes('cash out') ||
         lowerMsg.includes('cashout') ||
         lowerMsg.includes('withdraw') ||
-        messageText.includes('ক্যাশ আউট') ||
-        messageText.includes('ক্যাশআউট') ||
-        messageText.includes('উত্তোলন')));
+        targetMsg.includes('ক্যাশ আউট') ||
+        targetMsg.includes('ক্যাশআউট') ||
+        targetMsg.includes('উত্তোলন')));
 
   const isAddMoney =
     intent.type === 'add_money' ||
@@ -2375,13 +3293,13 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
       (lowerMsg.includes('cash in') ||
         lowerMsg.includes('add money') ||
         lowerMsg.startsWith('add ') ||
-        messageText.includes('ক্যাশ ইন') ||
-        messageText.includes('টাকা যোগ')));
+        targetMsg.includes('ক্যাশ ইন') ||
+        targetMsg.includes('টাকা যোগ')));
 
   const isMobileRecharge =
     intent.type === 'mobile_recharge' ||
     (intent.type === 'immediate' &&
-      (lowerMsg.includes('recharge') || messageText.includes('রিচার্জ')));
+      (lowerMsg.includes('recharge') || targetMsg.includes('রিচার্জ')));
 
   const isPayBill =
     intent.type === 'pay_bill' ||
@@ -2392,10 +3310,10 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
         lowerMsg.includes('titas') ||
         lowerMsg.includes('nesco') ||
         lowerMsg.includes('bill') ||
-        messageText.includes('বিল') ||
-        messageText.includes('বিদ্যুৎ') ||
-        messageText.includes('পানি') ||
-        messageText.includes('গ্যাস') ||
+        targetMsg.includes('বিল') ||
+        targetMsg.includes('বিদ্যুৎ') ||
+        targetMsg.includes('পানি') ||
+        targetMsg.includes('গ্যাস') ||
         lowerMsg.includes('electricity')));
 
   const isSendMoney =
@@ -2415,10 +3333,28 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
     }
 
     // Resolve Recipient
-    const recipient = await resolveRecipient(messageText, userId);
+    const recipient = await resolveRecipient(effectiveText || messageText, userId);
 
     // Missing Recipient Check
     if (!recipient) {
+      updateTaskState(userId, {
+        intent: 'send_money',
+        activeIntent: 'send_money',
+        activeTool: 'send_money',
+        status: 'collecting',
+        requiredParameters: ['recipient', 'amount'],
+        missingParameters: rawExplicitAmount === null ? ['recipient', 'amount'] : ['recipient'],
+        missingFields: rawExplicitAmount === null ? ['recipient', 'amount'] : ['recipient'],
+        parameters: rawExplicitAmount !== null ? { amount: bdtAmount, amountPoisha } : {},
+        accumulatedParams: rawExplicitAmount !== null ? { amount: bdtAmount, amountPoisha } : {},
+      });
+      emitCopilotEvent({
+        userId,
+        type: COPILOT_EVENTS.MISSING_PARAMETER,
+        intent: 'send_money',
+        message: 'Recipient missing for Send Money',
+        actionState: getTaskState(userId),
+      });
       return {
         reply: language === 'bn'
           ? 'কাকে টাকা পাঠাতে চান? অনুগ্রহ করে প্রাপকের মোবাইল নম্বর বা নাম উল্লেখ করুন (যেমন: 017XXXXXXXX বা রহিম)।'
@@ -2429,6 +3365,24 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
 
     // Missing Explicit Amount Check: "Send money to Rahim" without amount
     if (rawExplicitAmount === null) {
+      updateTaskState(userId, {
+        intent: 'send_money',
+        activeIntent: 'send_money',
+        activeTool: 'send_money',
+        status: 'collecting',
+        requiredParameters: ['recipient', 'amount'],
+        missingParameters: ['amount'],
+        missingFields: ['amount'],
+        parameters: { recipient: recipient.phone || recipient.name, recipientPhone: recipient.phone, recipientName: recipient.name },
+        accumulatedParams: { recipient: recipient.phone || recipient.name, recipientPhone: recipient.phone, recipientName: recipient.name },
+      });
+      emitCopilotEvent({
+        userId,
+        type: COPILOT_EVENTS.MISSING_PARAMETER,
+        intent: 'send_money',
+        message: 'Amount missing for Send Money',
+        actionState: getTaskState(userId),
+      });
       return {
         reply: language === 'bn'
           ? `${recipient.name}-কে কত টাকা পাঠাতে চান? অনুগ্রহ করে টাকার পরিমাণ উল্লেখ করুন (যেমন: ৫০০ টাকা)।`
@@ -2466,6 +3420,25 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
           : `This recipient account (${recipient.phone}) was not found, so the transfer cannot be completed.`,
         pendingAction: null,
       };
+    }
+
+    // If Child account, evaluate Guardian Policy first so guardian limits take precedence
+    if (user.accountType === 'CHILD') {
+      const childPolicy = await evaluateGuardianPolicy({
+        userId,
+        amountPoisha,
+        recipientPhone: recipient.phone,
+        riskScore: 0,
+      });
+
+      if (childPolicy.decision === 'block') {
+        return {
+          reply: language === 'bn'
+            ? `অভিভাবক সুরক্ষা সতর্কতা: লেনদেনের পরিমাণ আপনার অভিভাবক নির্ধারিত দৈনিক খরচের সীমা অতিক্রম করেছে (${childPolicy.reason})।`
+            : `Guardian Protection Notice: The requested transaction exceeds your guardian daily spending limit (${childPolicy.reason}).`,
+          pendingAction: null,
+        };
+      }
     }
 
     // Transaction Limit Check
@@ -2545,6 +3518,7 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
         amountPoisha,
         feePoisha,
         totalPoisha,
+        recipientName: recipient.name,
         recipientLabel: `${recipient.name} (${recipient.phone})`,
         recipientPhone: recipient.phone,
         details: {
@@ -2561,6 +3535,51 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
       expiresAt: new Date(Date.now() + 5 * 60 * 1000),
     });
 
+    const clientAction = {
+      type: 'open_modal',
+      modal: 'send',
+      prefill: {
+        recipient: recipient.phone,
+        recipientPhone: recipient.phone,
+        recipientName: recipient.name,
+        amount: String(amountPoisha / 100),
+      },
+    };
+
+    updateTaskState(userId, {
+      intent: 'send_money',
+      activeIntent: 'send_money',
+      activeTool: 'send_money',
+      status: 'ready',
+      missingParameters: [],
+      missingFields: [],
+      parameters: {
+        recipient: recipient.name,
+        recipientPhone: recipient.phone,
+        recipientName: recipient.name,
+        amountPoisha,
+        amount: bdtAmount,
+      },
+      accumulatedParams: {
+        recipient: recipient.name,
+        recipientPhone: recipient.phone,
+        recipientName: recipient.name,
+        amountPoisha,
+        amount: bdtAmount,
+      },
+      preparedPendingAction: pending,
+      clientAction,
+    });
+
+    emitCopilotEvent({
+      userId,
+      type: COPILOT_EVENTS.ACTION_READY,
+      intent: 'send_money',
+      message: `Send Money prepared: ${formatBdt(amountPoisha)} to ${recipient.name} (${recipient.phone})`,
+      actionState: getTaskState(userId),
+      persistNotification: true,
+    });
+
     let riskNotice = '';
     if (risk.isSuspicious) {
       const bullets = risk.reasons.map((r) => `• ${language === 'bn' ? r.bn : r.en}`).join('\n');
@@ -2574,12 +3593,32 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
         ? `${recipient.name}-এর অ্যাকাউন্ট পাওয়া গেছে। আপনি ${recipient.name}-কে (${recipient.phone}) ${formatBdt(amountPoisha)} পাঠাতে যাচ্ছেন। আপনি কি এগিয়ে যেতে চান? নিশ্চিত করতে নিচের কার্ডে পিন দিন। (ফি: ${formatBdt(feePoisha)})${riskNotice}`
         : `I found ${recipient.name}'s account. You are about to send ${formatBdt(amountPoisha)} to ${recipient.name} (${recipient.phone}). Do you want to continue? Please confirm below with your PIN. (Fee: ${formatBdt(feePoisha)})${riskNotice}`,
       pendingAction: pending,
+      clientAction,
+      actionState: getTaskState(userId),
     };
   }
 
   // 30. Cash Out
   if (isCashOut) {
     if (rawExplicitAmount === null) {
+      updateTaskState(userId, {
+        intent: 'cash_out',
+        activeIntent: 'cash_out',
+        activeTool: 'cash_out',
+        status: 'collecting',
+        requiredParameters: ['amount'],
+        missingParameters: ['amount'],
+        missingFields: ['amount'],
+        parameters: {},
+        accumulatedParams: {},
+      });
+      emitCopilotEvent({
+        userId,
+        type: COPILOT_EVENTS.MISSING_PARAMETER,
+        intent: 'cash_out',
+        message: 'Amount required for Cash Out',
+        actionState: getTaskState(userId),
+      });
       return {
         reply: language === 'bn'
           ? 'কত টাকা ক্যাশ আউট করতে চান? অনুগ্রহ করে টাকার পরিমাণ উল্লেখ করুন (যেমন: ২০০০ টাকা)।'
@@ -2665,17 +3704,80 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
       expiresAt: new Date(Date.now() + 5 * 60 * 1000),
     });
 
+    const clientAction = {
+      type: 'open_modal',
+      modal: 'cashout',
+      prefill: {
+        agentPhone: agentUser.phone,
+        amount: String(amountPoisha / 100),
+      },
+    };
+
+    updateTaskState(userId, {
+      intent: 'cash_out',
+      activeIntent: 'cash_out',
+      activeTool: 'cash_out',
+      status: 'ready',
+      missingParameters: [],
+      missingFields: [],
+      parameters: {
+        agentPhone: agentUser.phone,
+        amountPoisha,
+        amount: amountPoisha / 100,
+      },
+      preparedPendingAction: pending,
+      clientAction,
+    });
+
+    emitCopilotEvent({
+      userId,
+      type: COPILOT_EVENTS.ACTION_READY,
+      intent: 'cash_out',
+      message: `Cash Out prepared: ${formatBdt(amountPoisha)} via Agent ${agentUser.name}`,
+      actionState: getTaskState(userId),
+      persistNotification: true,
+    });
+
     return {
       reply: language === 'bn'
         ? `এজেন্ট ${agentUser.name}-এর মাধ্যমে ${formatBdt(amountPoisha)} ক্যাশ আউট করতে পিন দিয়ে নিশ্চিত করুন। (ফি: ${formatBdt(feePoisha)})`
         : `To cash out ${formatBdt(amountPoisha)} via Agent ${agentUser.name}, please confirm with your PIN. (Fee: ${formatBdt(feePoisha)})`,
       pendingAction: pending,
+      clientAction,
+      actionState: getTaskState(userId),
     };
   }
 
   // 31. Add Money / Cash In
   if (isAddMoney) {
-    if (rawExplicitAmount !== null && rawExplicitAmount <= 0) {
+    if (rawExplicitAmount === null) {
+      updateTaskState(userId, {
+        intent: 'add_money',
+        activeIntent: 'add_money',
+        activeTool: 'add_money',
+        status: 'collecting',
+        requiredParameters: ['amount'],
+        missingParameters: ['amount'],
+        missingFields: ['amount'],
+        parameters: {},
+        accumulatedParams: {},
+      });
+      emitCopilotEvent({
+        userId,
+        type: COPILOT_EVENTS.MISSING_PARAMETER,
+        intent: 'add_money',
+        message: 'Amount missing for Add Money',
+        actionState: getTaskState(userId),
+      });
+      return {
+        reply: language === 'bn'
+          ? 'ওয়ালেটে কত টাকা যোগ করতে চান? অনুগ্রহ করে টাকার পরিমাণ উল্লেখ করুন (যেমন: ১০০০ টাকা)।'
+          : 'How much would you like to add to your wallet? Please specify the amount (e.g. 1000 taka).',
+        pendingAction: null,
+      };
+    }
+
+    if (rawExplicitAmount <= 0) {
       return {
         reply: language === 'bn'
           ? '⚠️ টাকা যোগের পরিমাণ ০ বা ঋণাত্মক হতে পারে না।'
@@ -2714,17 +3816,111 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
       expiresAt: new Date(Date.now() + 5 * 60 * 1000),
     });
 
+    const clientAction = {
+      type: 'open_modal',
+      modal: 'addmoney',
+      prefill: {
+        amount: String(amountPoisha / 100),
+      },
+    };
+
+    updateTaskState(userId, {
+      intent: 'add_money',
+      activeIntent: 'add_money',
+      activeTool: 'add_money',
+      status: 'ready',
+      missingParameters: [],
+      missingFields: [],
+      parameters: {
+        amountPoisha,
+        amount: amountPoisha / 100,
+      },
+      preparedPendingAction: pending,
+      clientAction,
+    });
+
+    emitCopilotEvent({
+      userId,
+      type: COPILOT_EVENTS.ACTION_READY,
+      intent: 'add_money',
+      message: `Add Money prepared: ${formatBdt(amountPoisha)}`,
+      actionState: getTaskState(userId),
+      persistNotification: true,
+    });
+
     return {
       reply: language === 'bn'
         ? `ওয়ালেটে ${formatBdt(amountPoisha)} যোগ করতে নিচের কার্ডে পিন দিয়ে নিশ্চিত করুন।`
         : `To add ${formatBdt(amountPoisha)} to your wallet, please confirm below with your PIN.`,
       pendingAction: pending,
+      clientAction,
+      actionState: getTaskState(userId),
     };
   }
 
   // 32. Mobile Recharge
   if (isMobileRecharge) {
-    if (rawExplicitAmount !== null && (rawExplicitAmount < 1000 || rawExplicitAmount > 100000)) {
+    const phoneMatch = messageText.match(/01[3-9]\d{8}/);
+    const isExplicitOwn = lowerMsg.includes('my phone') || lowerMsg.includes('my number') || lowerMsg.includes('নিজের') || lowerMsg.includes('আমার');
+    const rechargePhone = phoneMatch ? phoneMatch[0] : (isExplicitOwn ? user.phone : null);
+
+    if (rawExplicitAmount === null) {
+      const targetPhone = rechargePhone || user.phone;
+      const operator = getOperatorFromPhone(targetPhone);
+      updateTaskState(userId, {
+        intent: 'mobile_recharge',
+        activeIntent: 'mobile_recharge',
+        activeTool: 'mobile_recharge',
+        status: 'collecting',
+        requiredParameters: ['recipient', 'amount'],
+        missingParameters: ['amount'],
+        missingFields: ['amount'],
+        parameters: { recipient: targetPhone, operator },
+        accumulatedParams: { recipient: targetPhone, operator },
+      });
+      emitCopilotEvent({
+        userId,
+        type: COPILOT_EVENTS.MISSING_PARAMETER,
+        intent: 'mobile_recharge',
+        message: 'Amount missing for Mobile Recharge',
+        actionState: getTaskState(userId),
+      });
+      return {
+        reply: language === 'bn'
+          ? `${targetPhone} নম্বরে (${operator}) কত টাকা রিচার্জ করতে চান? অনুগ্রহ করে টাকার পরিমাণ উল্লেখ করুন (যেমন: ৫০ টাকা)।`
+          : `How much would you like to recharge to ${targetPhone} (${operator})? Please specify the amount (e.g. 50 taka).`,
+        pendingAction: null,
+      };
+    }
+
+    if (!rechargePhone) {
+      updateTaskState(userId, {
+        intent: 'mobile_recharge',
+        activeIntent: 'mobile_recharge',
+        activeTool: 'mobile_recharge',
+        status: 'collecting',
+        requiredParameters: ['recipient', 'amount'],
+        missingParameters: ['recipient'],
+        missingFields: ['recipient'],
+        parameters: { amount: bdtAmount, amountPoisha },
+        accumulatedParams: { amount: bdtAmount, amountPoisha },
+      });
+      emitCopilotEvent({
+        userId,
+        type: COPILOT_EVENTS.MISSING_PARAMETER,
+        intent: 'mobile_recharge',
+        message: 'Phone number missing for Mobile Recharge',
+        actionState: getTaskState(userId),
+      });
+      return {
+        reply: language === 'bn'
+          ? `কোন নম্বরে ৳${bdtAmount} রিচার্জ করতে চান? অনুগ্রহ করে ১১ ডিজিটের মোবাইল নম্বর দিন (অথবা নিজের নম্বরে করতে লিখুন "আমার নম্বরে")।`
+          : `Which phone number would you like to recharge ৳${bdtAmount} to? Please provide the 11-digit mobile number (or say "to my number").`,
+        pendingAction: null,
+      };
+    }
+
+    if (rawExplicitAmount < 1000 || rawExplicitAmount > 100000) {
       return {
         reply: language === 'bn'
           ? '⚠️ রিচার্জের পরিমাণ ৳১০ থেকে ৳১,০০০-এর মধ্যে হতে হবে।'
@@ -2733,8 +3929,6 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
       };
     }
 
-    const phoneMatch = messageText.match(/01[3-9]\d{8}/);
-    const rechargePhone = phoneMatch ? phoneMatch[0] : user.phone;
     const operator = getOperatorFromPhone(rechargePhone);
 
     const actionId = `rech-act-${crypto.randomUUID()}`;
@@ -2760,34 +3954,54 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
       expiresAt: new Date(Date.now() + 5 * 60 * 1000),
     });
 
+    const clientAction = {
+      type: 'open_modal',
+      modal: 'recharge',
+      prefill: {
+        phone: rechargePhone,
+        operator,
+        amount: String(amountPoisha / 100),
+      },
+    };
+
+    updateTaskState(userId, {
+      intent: 'mobile_recharge',
+      activeIntent: 'mobile_recharge',
+      activeTool: 'mobile_recharge',
+      status: 'ready',
+      missingParameters: [],
+      missingFields: [],
+      parameters: {
+        recipient: rechargePhone,
+        operator,
+        amountPoisha,
+        amount: amountPoisha / 100,
+      },
+      preparedPendingAction: pending,
+      clientAction,
+    });
+
+    emitCopilotEvent({
+      userId,
+      type: COPILOT_EVENTS.ACTION_READY,
+      intent: 'mobile_recharge',
+      message: `Mobile Recharge prepared: ${formatBdt(amountPoisha)} to ${rechargePhone} (${operator})`,
+      actionState: getTaskState(userId),
+      persistNotification: true,
+    });
+
     return {
       reply: language === 'bn'
         ? `${rechargePhone} নম্বরে (${operator}) ${formatBdt(amountPoisha)} রিচার্জ করতে পিন দিয়ে নিশ্চিত করুন।`
         : `To recharge ${formatBdt(amountPoisha)} to ${rechargePhone} (${operator}), please confirm below with your PIN.`,
       pendingAction: pending,
+      clientAction,
+      actionState: getTaskState(userId),
     };
   }
 
   // 33. Bill Pay
   if (isPayBill) {
-    if (rawExplicitAmount === null) {
-      return {
-        reply: language === 'bn'
-          ? 'কত টাকা বিল পরিশোধ করতে চান? অনুগ্রহ করে টাকার পরিমাণ উল্লেখ করুন (যেমন: ১২০০ টাকা)।'
-          : 'What is the bill amount you would like to pay? Please specify the amount (e.g. 1200 taka).',
-        pendingAction: null,
-      };
-    }
-
-    if (rawExplicitAmount <= 0) {
-      return {
-        reply: language === 'bn'
-          ? '⚠️ বিল পরিশোধের পরিমাণ ০ বা ঋণাত্মক হতে পারে না।'
-          : '⚠️ Bill payment amount must be greater than zero.',
-        pendingAction: null,
-      };
-    }
-
     let billerId = 'DPDC';
     let billLabel = 'DPDC Electricity';
     const lowerBill = messageText.toLowerCase();
@@ -2808,7 +4022,57 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
       billLabel = 'DPDC Electricity';
     }
 
+    if (rawExplicitAmount === null) {
+      updateTaskState(userId, {
+        intent: 'pay_bill',
+        activeIntent: 'pay_bill',
+        activeTool: 'pay_bill',
+        status: 'collecting',
+        requiredParameters: ['billerId', 'amount'],
+        missingParameters: ['amount'],
+        missingFields: ['amount'],
+        parameters: { billerId },
+        accumulatedParams: { billerId },
+      });
+      emitCopilotEvent({
+        userId,
+        type: COPILOT_EVENTS.MISSING_PARAMETER,
+        intent: 'pay_bill',
+        message: 'Amount missing for Bill Payment',
+        actionState: getTaskState(userId),
+      });
+      return {
+        reply: language === 'bn'
+          ? `${billLabel}-এর বিলের পরিমাণ কত টাকা? অনুগ্রহ করে টাকার পরিমাণ উল্লেখ করুন (যেমন: ১২০০ টাকা)।`
+          : `What is the bill amount you would like to pay for ${billLabel}? Please specify the amount (e.g. 1200 taka).`,
+        pendingAction: null,
+      };
+    }
+
+    if (rawExplicitAmount <= 0) {
+      return {
+        reply: language === 'bn'
+          ? '⚠️ বিল পরিশোধের পরিমাণ ০ বা ঋণাত্মক হতে পারে না।'
+          : '⚠️ Bill payment amount must be greater than zero.',
+        pendingAction: null,
+      };
+    }
+
     let accountNo = '442109';
+    // Resolve utility account from memory
+    try {
+      const rememberedUtil = await resolveUtilityAccount({ userId, billerQuery: `${billerId} ${messageText}` });
+      if (rememberedUtil?.accountNo) {
+        accountNo = rememberedUtil.accountNo;
+        if (rememberedUtil.billerId) {
+          billerId = rememberedUtil.billerId;
+          billLabel = `${billerId} Bill`;
+        }
+      }
+    } catch (err) {
+      logger.warn({ err: err.message }, 'Failed to resolve utility account from memory');
+    }
+
     const accMatches = messageText.match(/\b\d{6,12}\b/g);
     if (accMatches && accMatches.length > 0) {
       const explicitAmtStr = String(Math.floor(amountPoisha / 100));
@@ -2851,11 +4115,49 @@ export async function processSingleIntent({ userId, messageText, language = 'bn'
       expiresAt: new Date(Date.now() + 5 * 60 * 1000),
     });
 
+    const clientAction = {
+      type: 'open_modal',
+      modal: 'paybill',
+      prefill: {
+        biller: billerId,
+        amount: String(amountPoisha / 100),
+        accountNo,
+      },
+    };
+
+    updateTaskState(userId, {
+      intent: 'pay_bill',
+      activeIntent: 'pay_bill',
+      activeTool: 'pay_bill',
+      status: 'ready',
+      missingParameters: [],
+      missingFields: [],
+      parameters: {
+        billerId,
+        accountNo,
+        amountPoisha,
+        amount: amountPoisha / 100,
+      },
+      preparedPendingAction: pending,
+      clientAction,
+    });
+
+    emitCopilotEvent({
+      userId,
+      type: COPILOT_EVENTS.ACTION_READY,
+      intent: 'pay_bill',
+      message: `Bill Payment prepared: ${formatBdt(amountPoisha)} for ${billLabel}`,
+      actionState: getTaskState(userId),
+      persistNotification: true,
+    });
+
     return {
       reply: language === 'bn'
         ? `${billLabel} (হিসাব নং ${accountNo})-এর ${formatBdt(amountPoisha)} বিল পরিশোধ করতে পিন দিয়ে নিশ্চিত করুন।`
         : `To pay ${formatBdt(amountPoisha)} for ${billLabel} (A/C: ${accountNo}), please confirm with your PIN.`,
       pendingAction: pending,
+      clientAction,
+      actionState: getTaskState(userId),
     };
   }
 
@@ -3034,162 +4336,8 @@ export async function executePendingAction({ actionId, userId }) {
     throw new Error('This action has expired. Please initiate the request again.');
   }
 
-  const { sendMoney, cashOut, payBill, mobileRecharge, addMoney } = await import('./transaction.service.js');
-  const { createSchedule } = await import('./scheduler.service.js');
-  const { createRule } = await import('./rule.service.js');
-  const { createMoneyRequest } = await import('./request.service.js');
-  const { decideGuardianApproval: decideGuardian } = await import('./guardian.service.js');
-
-  let result = null;
-  switch (action.tool) {
-    case 'send_money':
-      result = await sendMoney({
-        senderUserId: userId,
-        recipientPhone: action.args.recipientPhone,
-        amountPoisha: action.args.amountPoisha,
-        channel: 'agent',
-      });
-      break;
-
-    case 'cash_out':
-      result = await cashOut({
-        customerUserId: userId,
-        agentIdentifier: action.args.agentPhone || action.args.agentIdentifier,
-        amountPoisha: action.args.amountPoisha,
-        channel: 'agent',
-      });
-      break;
-
-    case 'add_money':
-      result = await addMoney({
-        userId,
-        amountPoisha: action.args.amountPoisha,
-        source: action.args.source || 'simulated_bank',
-      });
-      break;
-
-    case 'mobile_recharge':
-      result = await mobileRecharge({
-        userId,
-        recipientPhone: action.args.recipientPhone,
-        amountPoisha: action.args.amountPoisha,
-        operator: action.args.operator,
-      });
-      break;
-
-    case 'pay_bill':
-      result = await payBill({
-        userId,
-        billerId: action.args.billerId || 'DPDC',
-        accountNo: action.args.accountNo || '442109',
-        amountPoisha: action.args.amountPoisha,
-        channel: 'agent',
-      });
-      break;
-
-    case 'create_schedule':
-      result = await createSchedule({
-        userId,
-        actionType: action.args.actionType,
-        frequency: action.args.frequency,
-        actionPayload: action.args.actionPayload,
-        nextRunAt: action.args.nextRunAt,
-        mandate: action.args.mandate,
-      });
-      break;
-
-    case 'create_rule':
-      result = await createRule({
-        userId,
-        trigger: action.args.trigger,
-        action: action.args.action,
-        mandate: action.args.mandate,
-      });
-      break;
-
-    case 'guardian_decision':
-      result = await decideGuardian({
-        guardianUserId: userId,
-        txnId: action.args.txnId,
-        decision: action.args.decision,
-      });
-      break;
-
-    case 'create_group_bill':
-      result = await createMoneyRequest({
-        creatorUserId: userId,
-        kind: 'bill_split',
-        splitType: action.args.splitType || 'equal',
-        totalAmountPoisha: action.args.totalAmountPoisha,
-        participants: action.args.participants,
-        description: action.args.description,
-      });
-      break;
-
-    default:
-      throw new Error(`Unsupported tool: ${action.tool}`);
-  }
-
-  action.status = 'executed';
-  action.executedTxnId = result?._id || result?.transaction?._id;
-  await action.save();
-
-  // Audit Log entry
-  await AuditLog.create({
-    userId,
-    action: `copilot.${action.tool}`,
-    tool: action.tool,
-    status: 'success',
-    details: {
-      actionId: action.actionId,
-      executedTxnId: action.executedTxnId,
-      preview: action.preview,
-    },
-  }).catch((err) => logger.warn({ err }, 'Failed to record copilot audit log'));
-
-  // Realtime notification of action completion
-  emitToUser(userId, 'copilot:action_completed', {
-    tool: action.tool,
-    actionId: action.actionId,
-  });
-
-  const amtBdt = action.preview?.amountPoisha ? (action.preview.amountPoisha / 100).toFixed(2) : '0.00';
-  let message = `Action ${action.tool} executed successfully.`;
-  let messageBn = `কার্যক্রম সফলভাবে সম্পন্ন হয়েছে।`;
-
-  if (action.tool === 'send_money') {
-    const recipient = action.preview?.recipientLabel || action.args.recipientPhone;
-    message = `৳${amtBdt} successfully sent to ${recipient}.`;
-    messageBn = `${recipient}-কে ৳${amtBdt} সফলভাবে পাঠানো হয়েছে।`;
-  } else if (action.tool === 'cash_out') {
-    message = `৳${amtBdt} successfully cashed out via Agent.`;
-    messageBn = `এজেন্টের মাধ্যমে ৳${amtBdt} ক্যাশ আউট সফলভাবে সম্পন্ন হয়েছে।`;
-  } else if (action.tool === 'pay_bill') {
-    const biller = action.args.billerId || 'Bill';
-    message = `৳${amtBdt} bill payment for ${biller} completed successfully.`;
-    messageBn = `${biller} বিল বাবদ ৳${amtBdt} সফলভাবে পরিশোধ করা হয়েছে।`;
-  } else if (action.tool === 'mobile_recharge') {
-    message = `৳${amtBdt} recharge to ${action.args.recipientPhone} completed successfully.`;
-    messageBn = `${action.args.recipientPhone} নম্বরে ৳${amtBdt} রিচার্জ সফলভাবে সম্পন্ন হয়েছে।`;
-  } else if (action.tool === 'add_money') {
-    message = `৳${amtBdt} added to wallet successfully.`;
-    messageBn = `ওয়ালেটে ৳${amtBdt} সফলভাবে যোগ হয়েছে।`;
-  } else if (action.tool === 'create_schedule') {
-    message = `Payment schedule created successfully.`;
-    messageBn = `পেমেন্ট শিডিউল সফলভাবে তৈরি হয়েছে।`;
-  } else if (action.tool === 'create_rule') {
-    message = `Conditional automation rule created successfully.`;
-    messageBn = `শর্তযুক্ত অটোমেশন রুল সফলভাবে তৈরি হয়েছে।`;
-  } else if (action.tool === 'guardian_decision') {
-    message = `Child transaction of ৳${amtBdt} approved successfully.`;
-    messageBn = `সন্তানের ৳${amtBdt} লেনদেন সফলভাবে অনুমোদিত হয়েছে।`;
-  } else if (action.tool === 'create_group_bill') {
-    const count = action.args.participants?.length || 0;
-    message = `Group bill for ৳${amtBdt} ('${action.args.description || 'Split'}') created successfully. Requests sent to ${count} participants.`;
-    messageBn = `৳${amtBdt} টাকার গ্রুপ বিল ('${action.args.description || 'স্প্লিট'}') সফলভাবে তৈরি হয়েছে। ${count} জন সদস্যের কাছে অনুরোধ পাঠানো হয়েছে।`;
-  }
-
-  return { success: true, tool: action.tool, result, message, messageBn };
+  clearActiveTask(userId);
+  return executePendingActionTool({ action, userId });
 }
 
 export default {

@@ -32,6 +32,7 @@ const PendingActionSchema = new mongoose.Schema(
       amountPoisha: { type: Number },
       feePoisha: { type: Number, default: 0 },
       totalPoisha: { type: Number },
+      recipientName: { type: String },
       recipientLabel: { type: String },
       recipientPhone: { type: String },
       details: { type: mongoose.Schema.Types.Mixed },

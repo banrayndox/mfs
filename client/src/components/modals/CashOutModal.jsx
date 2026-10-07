@@ -8,54 +8,25 @@ import {
 import { CashOutColorIcon, CheckmarkSuccessColorIcon } from '../ui/FlaticonIcons.jsx';
 import { useAuthStore } from '../../stores/authStore.js';
 
-export function CashOutModal({ isOpen, onClose, onSuccess }) {
+export function CashOutModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  initialAgentPhone = '',
+  initialAmount = '',
+}) {
   const { user, setUser } = useAuthStore();
   const [agents, setAgents] = useState([]);
   const [selectedAgentId, setSelectedAgentId] = useState('');
-  const [manualAgentInput, setManualAgentInput] = useState('');
+  const [manualAgentInput, setManualAgentInput] = useState(initialAgentPhone || '');
   const [verifiedAgent, setVerifiedAgent] = useState(null);
   const [agentChecking, setAgentChecking] = useState(false);
   const [agentError, setAgentError] = useState('');
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState(initialAmount ? String(initialAmount) : '');
   const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successData, setSuccessData] = useState(null);
-
-  useEffect(() => {
-    if (isOpen) {
-      setAgents([]);
-      setSelectedAgentId('');
-      setManualAgentInput('');
-      setVerifiedAgent(null);
-      setAgentError('');
-      setAmount('');
-      setPin('');
-      setError('');
-      setSuccessData(null);
-
-      // Fetch active agents from MongoDB directory
-      axios
-        .get('/api/agents')
-        .then((res) => {
-          const list = res.data.agents || [];
-          setAgents(list);
-          if (list.length > 0) {
-            setSelectedAgentId(list[0].agentId);
-            setVerifiedAgent(list[0]);
-          }
-        })
-        .catch(() => {});
-    }
-  }, [isOpen]);
-
-  // Handle agent selection from directory list
-  const handleSelectAgent = (agent) => {
-    setSelectedAgentId(agent.agentId);
-    setManualAgentInput('');
-    setVerifiedAgent(agent);
-    setAgentError('');
-  };
 
   // Handle manual agent phone/agentId entry
   const handleManualAgentLookup = (value) => {
@@ -84,6 +55,45 @@ export function CashOutModal({ isOpen, onClose, onSuccess }) {
     } else {
       setAgentError('');
     }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      setAgents([]);
+      setSelectedAgentId('');
+      setManualAgentInput(initialAgentPhone || '');
+      setVerifiedAgent(null);
+      setAgentError('');
+      setAmount(initialAmount ? String(initialAmount) : '');
+      setPin('');
+      setError('');
+      setSuccessData(null);
+
+      if (initialAgentPhone) {
+        handleManualAgentLookup(initialAgentPhone);
+      } else {
+        // Fetch active agents from MongoDB directory
+        axios
+          .get('/api/agents')
+          .then((res) => {
+            const list = res.data.agents || [];
+            setAgents(list);
+            if (list.length > 0) {
+              setSelectedAgentId(list[0].agentId);
+              setVerifiedAgent(list[0]);
+            }
+          })
+          .catch(() => {});
+      }
+    }
+  }, [isOpen, initialAgentPhone, initialAmount]);
+
+  // Handle agent selection from directory list
+  const handleSelectAgent = (agent) => {
+    setSelectedAgentId(agent.agentId);
+    setManualAgentInput('');
+    setVerifiedAgent(agent);
+    setAgentError('');
   };
 
   if (!isOpen) return null;
@@ -133,7 +143,7 @@ export function CashOutModal({ isOpen, onClose, onSuccess }) {
       );
 
       setSuccessData(cashOutRes.data.transaction);
-      if (user) {
+      if (user && cashOutRes.data.transaction?.status !== 'awaiting_guardian') {
         setUser({ ...user, balancePoisha: user.balancePoisha - Math.round(total * 100) });
       }
       onSuccess?.();
@@ -159,14 +169,31 @@ export function CashOutModal({ isOpen, onClose, onSuccess }) {
 
         {successData ? (
           <div className="text-center py-6 space-y-3">
-            <CheckmarkSuccessColorIcon className="w-14 h-14 mx-auto" />
-            <h4 className="text-lg font-bold text-slate-900 dark:text-white">ক্যাশ আউট সফল হয়েছে!</h4>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              {verifiedAgent?.name || 'এজেন্ট'}-এ ৳{bdtAmount.toFixed(2)} ক্যাশ আউট সম্পন্ন হয়েছে।
-            </p>
-            <div className="bg-amber-50 dark:bg-slate-800 p-3 rounded-2xl text-xs text-amber-900 dark:text-amber-300 border border-amber-200/60 dark:border-slate-700">
-              💡 ক্যাশ আউট ফি (১.৫%): ৳{fee.toFixed(2)} | মোট কর্তন: ৳{total.toFixed(2)}
-            </div>
+            {successData.status === 'awaiting_guardian' ? (
+              <>
+                <div className="w-14 h-14 mx-auto rounded-full bg-amber-100 dark:bg-amber-950 flex items-center justify-center">
+                  <IoAlertCircleOutline className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+                </div>
+                <h4 className="text-lg font-bold text-slate-900 dark:text-white">অভিভাবকের অনুমোদনের অপেক্ষায় (Awaiting Guardian Approval)</h4>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  আপনার ৳{bdtAmount.toFixed(2)} ক্যাশ আউট আবেদনটি অভিভাবকের অনুমোদনের অপেক্ষায় জমা হয়েছে।
+                </p>
+                <div className="bg-amber-50 dark:bg-slate-800 p-3 rounded-2xl text-xs text-amber-900 dark:text-amber-300 border border-amber-200/60 dark:border-slate-700">
+                  ⏳ অভিভাবক অনুমোদন করলে ক্যাশ আউট সম্পন্ন হবে। আইডি: {successData._id?.slice(-8) || 'TXN-PEND'}
+                </div>
+              </>
+            ) : (
+              <>
+                <CheckmarkSuccessColorIcon className="w-14 h-14 mx-auto" />
+                <h4 className="text-lg font-bold text-slate-900 dark:text-white">ক্যাশ আউট সফল হয়েছে!</h4>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  {verifiedAgent?.name || 'এজেন্ট'}-এ ৳{bdtAmount.toFixed(2)} ক্যাশ আউট সম্পন্ন হয়েছে।
+                </p>
+                <div className="bg-amber-50 dark:bg-slate-800 p-3 rounded-2xl text-xs text-amber-900 dark:text-amber-300 border border-amber-200/60 dark:border-slate-700">
+                  💡 ক্যাশ আউট ফি (১.৫%): ৳{fee.toFixed(2)} | মোট কর্তন: ৳{total.toFixed(2)}
+                </div>
+              </>
+            )}
             <button
               onClick={() => {
                 setSuccessData(null);

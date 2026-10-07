@@ -18,3 +18,5 @@ export { LinkedAccount } from './LinkedAccount.js';
 export { SavingsPlan } from './SavingsPlan.js';
 export { ConsumedToken } from './ConsumedToken.js';
 export { FinancialMemory } from './FinancialMemory.js';
+export { CopilotMessage } from './CopilotMessage.js';
+export { CopilotActionState } from './CopilotActionState.js';

@@ -36,6 +36,21 @@
   6. *RAG Documentation Pipeline*: Self-contained TF-IDF cosine similarity knowledge retrieval provides grounded explanations for official MFS documentation (Send vs Cash Out, Fee Schedules, Security Policies, Account Tiers). RAG is strictly restricted to static help docs and never touches live financial balances or transaction history.
   7. *Application Control Tools*: Natural language triggers real logout (`clientAction: { type: 'logout' }`), opens the secure `ChangePinModal` without exposing PIN in chat (`clientAction: { type: 'open_modal', modal: 'change_pin' }`), and navigates across the app.
   8. *Canonical Action Hashing & Anti-Replay Tokens*: High-risk mutations require canonical action hash verification matching T2 PIN step-up tokens before execution.
+- **ADR-018: AI-Powered MFS Copilot Production Architecture Refactor**:
+  1. *De-coupled Modular Subsystems (`server/src/services/copilot/*`)*: Separated agent logic into 10 dedicated single-responsibility engines: `inputNormalizer`, `toolRegistry` (47 tools cataloged across 12 categories), `taskStateManager` (multi-turn conversational memory, corrections, and cancellations), `entityResolver` (deterministic recipient & transliteration lookup), `ruleEngine` (business validations, fees, limits, and child policies), `confirmationManager` (canonical hashing & PendingAction generation), `intentPlanner` (security gates, LLM integration, and deterministic semantic planner), `auditLogger` (PII-scrubbed audit trail), `toolExecutor` (deterministic mutation execution after step-up auth), and `responseGenerator` (bilingual factual responses).
+  2. *Strict LLM Boundary & Deterministic Settlement*: The LLM is strictly prohibited from mutating databases, approving limits, or deciding financial amounts. Mutations execute deterministically through MFS services via MongoDB multi-document transactions with T2 PIN step-up verification.
+  3. *Semantic Natural Language & Multilingual Resiliency*: Complete removal of exact keyword checking. Intent is extracted semantically across Bangla, English, Banglish, and mixed queries, including natural speech corrections ("না, ৭০০ পাঠাও", "না, কানজিলকে পাঠাও") and cancellations ("না, বাতিল করো").
+  4. *Deterministic Fallback & Offline Independence*: Works without Groq API keys (`AI: mock mode` badge), ensuring zero external dependency for end-to-end testing and local deployments.
+- **ADR-019: Persistent Conversational & Long-Term Financial Memory Architecture**:
+  1. *Two-Tier Memory Model*:
+     - *Short-Term & Persistent Conversation History*: Multi-turn dialogue is persisted in MongoDB via `CopilotMessage` (with a 30-day TTL auto-expiry index), automatically restoring recent context across modal closes and re-opens, accompanied by privacy-compliant "Clear Chat" (`DELETE /api/copilot/history`).
+     - *Long-Term Memory Subsystem (`FinancialMemory` & `memory.service.js`)*: Preserves contact aliases (bilingual kinship mapping: "brother", "bhai", "ভাই", "landlord"), utility bill accounts ("DESCO account 442109"), micro-savings preferences, financial goals, and personal context notes.
+  2. *Contextual Injection & Zero-Friction Fulfillment*:
+     - Recipient resolution automatically links remembered aliases ("Send 500 to my brother" -> immediately resolves recipient Rakib and prepares the step-up confirmation).
+     - Utility payments auto-resolve saved meter/account numbers when omitted from prompts ("Pay DESCO bill 1200" -> automatically retrieves account `442109`).
+  3. *Natural Language Memory Control*: Users can inspect ("What do you remember about me?"), record ("Remember that Karim is my brother"), remove ("Forget that Karim is my brother"), or clear ("Clear my memory") through conversational dialogue or dedicated REST APIs.
+  4. *Visual Client Memory Drawer*: Added a dedicated "🧠 Memory" drawer toggle in `AgentModal.jsx` displaying known contact relationships, utility meters, and goals with instant deletion and direct manual entry.
+  5. *Zero Credential Leakage*: Strict security boundaries prevent PINs, passwords, or authentication secrets from being recorded into conversational or long-term memory.
 
 ## Milestone Log
 
@@ -365,3 +380,23 @@
   - 21 comprehensive integration tests in `server/tests/ai_copilot_conversational.test.js`.
   - Full backend test suite: 15 test suites, 143 / 143 tests passing 100%.
   - Frontend production build: clean Vite build (9.84s).
+
+### M18: Specialized Domain Agents Architecture & Conversational State Orchestration
+- **Specialized Domain Agents (`server/src/services/copilot/domainAgents/`)**:
+  - `domainRouter.js`: Central orchestrator receiving structured context `{ userId, messageText, language, user, wallet, taskState, intent }` and routing to domain agents based on semantic intent and active task state.
+  - `savingsAgent.js`: Complete autonomous handling of all manual savings capabilities via natural language (no naive text matching):
+    - Micro-savings configuration: percentage auto-save (1% to 25% boundary validation, negative rejection), round-up auto-save toggle.
+    - Lifecycle controls: pause, resume, and disable micro-savings.
+    - Goal-based savings: goal creation with purpose extraction (stop-word resilient, e.g. "for my new laptop"), dynamic duration extraction, pace recommendation calculation (`calculateGoalPace`), goal target updates, and progress queries ("How am I doing with my Laptop?").
+    - Direct savings deposit: integer poisha validation, balance pre-check, and `PendingAction` creation with Tier 2 step-up PIN verification.
+    - Settings and status query: retrieves real MongoDB config and active plans.
+  - `guardianAgent.js`: Child account onboarding, limit updates, typo-tolerant parsing (e.g. `gchildren`, `liimit`), multi-turn slot filling (prompting for missing phone number or limit), and pending approval queue checks.
+  - `groupBillAgent.js`: Bill splitting, equal and custom share calculation, contact resolution, participant validation, and prefilling the `group_bill` modal.
+  - `scheduleRuleAgent.js`: Autonomous scheduling, conditional rules ("when money comes save 500"), and smart reminders with companion scheduling.
+- **Resilient Multi-Turn & Partial Inputs Handling**:
+  - State machine maintains conversational task state (`taskState`) across turns, recognizing follow-up inputs ("01774474900", "500", "Grameenphone") within the active workflow without resetting context.
+- **Verification & Testing**:
+  - 14 specialized domain agent tests in `server/tests/ai_copilot_domain_agents.test.js`.
+  - Full test suite: 20 test files, 183 / 183 tests passing 100%.
+  - Production Vite build: passes cleanly.
+

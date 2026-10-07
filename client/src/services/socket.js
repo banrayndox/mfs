@@ -7,13 +7,9 @@ let currentToken = null;
 // Determine socket server URL
 const getSocketUrl = () => {
   if (typeof window !== 'undefined') {
-    // In dev, Vite is on 5173, backend on 5000
-    if (window.location.port === '5173') {
-      return `${window.location.protocol}//${window.location.hostname}:5000`;
-    }
-    return window.location.origin;
+    return import.meta.env.VITE_BACKEND_URL || window.location.origin;
   }
-  return 'http://localhost:5000';
+  return 'http://localhost:5001';
 };
 
 /**

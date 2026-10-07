@@ -1,9 +1,18 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-export default defineConfig({
-  plugins: [
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, path.resolve(__dirname, '..'), '');
+  const serverPort = env.PORT || process.env.PORT || '5001';
+  const target = `http://localhost:${serverPort}`;
+
+  return {
+    plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
@@ -64,11 +73,11 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target,
         changeOrigin: true,
       },
       '/socket.io': {
-        target: 'http://localhost:5000',
+        target,
         ws: true,
       },
     },
@@ -77,4 +86,5 @@ export default defineConfig({
     host: true,
     port: 4173,
   },
+};
 });

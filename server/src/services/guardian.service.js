@@ -272,7 +272,7 @@ export async function getPendingApprovalById({ guardianUserId, txnId }) {
 /**
  * Guardian decides (approves or rejects) a pending transaction.
  */
-export async function decideGuardianApproval({ guardianUserId, txnId, decision }) {
+export async function decideGuardianApproval({ guardianUserId, txnId, decision, reason }) {
   const txn = await Transaction.findById(txnId);
   if (!txn || txn.status !== 'awaiting_guardian') {
     throw new Error('Transaction not found or not pending guardian approval.');
@@ -299,14 +299,15 @@ export async function decideGuardianApproval({ guardianUserId, txnId, decision }
 
   if (decision === 'reject') {
     txn.status = 'cancelled';
-    txn.errorMessage = 'Rejected by guardian.';
+    const customReason = reason ? reason.trim() : 'Rejected by guardian.';
+    txn.errorMessage = customReason;
     await txn.save();
 
     const [childNotif] = await Notification.create([
       {
         userId: txn.senderUserId,
         title: 'লেনদেন বাতিল করা হয়েছে (Transaction Rejected)',
-        body: `আপনার অভিভাবক ৳${(txn.amount / 100).toFixed(2)} পাঠানোর আবেদনটি বাতিল করেছেন।`,
+        body: `আপনার অভিভাবক ৳${(txn.amount / 100).toFixed(2)} পাঠানোর আবেদনটি বাতিল করেছেন। কারণ: ${customReason}`,
         type: 'transaction',
         metadata: { txnId: txn._id, status: 'cancelled' },
       },

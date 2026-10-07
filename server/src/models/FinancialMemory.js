@@ -51,11 +51,43 @@ const FinancialMemorySchema = new mongoose.Schema(
     // Context notes and remembered preferences
     userContextNotes: [
       {
-        fact: { type: String, trim: true },
-        category: { type: String, default: 'general' },
+        fact: { type: String, trim: true, required: true },
+        category: {
+          type: String,
+          enum: ['general', 'relationship', 'utility', 'budget', 'preference', 'safety'],
+          default: 'general',
+        },
+        key: { type: String, trim: true },
+        value: { type: String, trim: true },
         createdAt: { type: Date, default: Date.now },
       },
     ],
+    // Contact Aliases (e.g. "bhai" -> 01710000002 / "Rakib", "landlord" -> "Rahim")
+    contactAliases: [
+      {
+        alias: { type: String, required: true, trim: true, lowercase: true },
+        name: { type: String, trim: true },
+        phone: { type: String, trim: true },
+        relationship: { type: String, trim: true },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+    // Remembered Utility Accounts (e.g. "DESCO" -> "442109", "WASA" -> "998877")
+    utilityAccounts: [
+      {
+        billerId: { type: String, required: true, trim: true },
+        accountNo: { type: String, required: true, trim: true },
+        nickname: { type: String, trim: true },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+    // Personalized Financial Preferences
+    financialPreferences: {
+      monthlyBudgetPoisha: { type: Number, default: 0 },
+      minimumSafetyBufferPoisha: { type: Number, default: 0 },
+      preferredCashoutAgent: { type: String, trim: true },
+      preferredOperator: { type: String, trim: true },
+    },
   },
   { timestamps: true }
 );

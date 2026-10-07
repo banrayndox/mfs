@@ -12,6 +12,7 @@ import {
   SecurityAlertColorIcon,
   RemindersColorIcon,
   SendMoneyColorIcon,
+  AiCopilotColorIcon,
 } from '../ui/FlaticonIcons.jsx';
 import { useSystemStore } from '../../stores/systemStore.js';
 import { GuardianApprovalModal } from './GuardianApprovalModal.jsx';
@@ -23,7 +24,9 @@ export function NotificationsModal({ isOpen, onClose }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedTxnForApproval, setSelectedTxnForApproval] = useState(null);
+  const [selectedActionType, setSelectedActionType] = useState('approve');
   const [approvalLoading, setApprovalLoading] = useState(false);
+  const [decidedMap, setDecidedMap] = useState({});
 
   const fetchNotifications = async () => {
     setLoading(true);
@@ -42,7 +45,8 @@ export function NotificationsModal({ isOpen, onClose }) {
     }
   };
 
-  const handleOpenApproval = async (item) => {
+  const handleOpenApproval = async (item, action = 'approve') => {
+    setSelectedActionType(action);
     const txnId = item.metadata?.txnId;
     if (!txnId) return;
 
@@ -107,6 +111,10 @@ export function NotificationsModal({ isOpen, onClose }) {
     const handleGuardianDecided = (event) => {
       const decided = event.detail;
       if (!decided?.txnId) return;
+      setDecidedMap((prev) => ({
+        ...prev,
+        [decided.txnId]: decided.decision === 'approve' ? 'approved' : 'rejected',
+      }));
       if (
         selectedTxnForApproval &&
         (selectedTxnForApproval._id === decided.txnId || selectedTxnForApproval.id === decided.txnId)
@@ -157,6 +165,9 @@ export function NotificationsModal({ isOpen, onClose }) {
         return <GuardianColorIcon className="w-5 h-5" />;
       case 'security_alert':
         return <SecurityAlertColorIcon className="w-5 h-5" />;
+      case 'copilot':
+      case 'ai_copilot':
+        return <AiCopilotColorIcon className="w-5 h-5" />;
       case 'scheduled_due':
       case 'reminder':
         return <RemindersColorIcon className="w-5 h-5" />;
@@ -273,18 +284,44 @@ export function NotificationsModal({ isOpen, onClose }) {
                       </span>
 
                       {item.type === 'guardian_request' && item.metadata?.txnId && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenApproval(item);
-                          }}
-                          disabled={approvalLoading}
-                          className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition-all shadow-xs flex items-center gap-1 disabled:opacity-50"
-                        >
-                          <IoShieldCheckmarkOutline className="w-3.5 h-3.5" />
-                          <span>{i18n.language === 'bn' ? 'অনুমোদন (Approve)' : 'Approve'}</span>
-                        </button>
+                        <div>
+                          {decidedMap[item.metadata.txnId] === 'approved' ? (
+                            <span className="px-2.5 py-1 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold">
+                              {i18n.language === 'bn' ? 'অনুমোদিত' : 'Approved'}
+                            </span>
+                          ) : decidedMap[item.metadata.txnId] === 'rejected' ? (
+                            <span className="px-2.5 py-1 rounded-xl bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 text-[11px] font-bold">
+                              {i18n.language === 'bn' ? 'প্রত্যাখ্যাত' : 'Rejected'}
+                            </span>
+                          ) : (
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenApproval(item, 'approve');
+                                }}
+                                disabled={approvalLoading}
+                                className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition-all shadow-xs flex items-center gap-1 disabled:opacity-50"
+                              >
+                                <IoShieldCheckmarkOutline className="w-3.5 h-3.5" />
+                                <span>{i18n.language === 'bn' ? 'অনুমোদন' : 'Approve'}</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenApproval(item, 'reject');
+                                }}
+                                disabled={approvalLoading}
+                                className="px-2.5 py-1 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold transition-all shadow-xs flex items-center gap-1 disabled:opacity-50"
+                              >
+                                <IoCloseOutline className="w-3.5 h-3.5" />
+                                <span>{i18n.language === 'bn' ? 'প্রত্যাখ্যান' : 'Reject'}</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -309,6 +346,7 @@ export function NotificationsModal({ isOpen, onClose }) {
       <GuardianApprovalModal
         isOpen={!!selectedTxnForApproval}
         transaction={selectedTxnForApproval}
+        actionType={selectedActionType}
         onClose={() => setSelectedTxnForApproval(null)}
         onSuccess={() => {
           setSelectedTxnForApproval(null);

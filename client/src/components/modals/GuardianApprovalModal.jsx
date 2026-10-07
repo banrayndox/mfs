@@ -16,9 +16,10 @@ import { GuardianColorIcon, CheckmarkSuccessColorIcon } from '../ui/FlaticonIcon
  * Never uses window.prompt or native dialogs.
  * PIN is handled securely in password mode, never logged or stored.
  */
-export function GuardianApprovalModal({ isOpen, onClose, transaction, onSuccess }) {
+export function GuardianApprovalModal({ isOpen, onClose, transaction, onSuccess, actionType = 'approve' }) {
   const { i18n } = useTranslation();
   const [pin, setPin] = useState('');
+  const [rejectReason, setRejectReason] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -29,6 +30,7 @@ export function GuardianApprovalModal({ isOpen, onClose, transaction, onSuccess 
     if (isOpen) {
       document.body.style.overflow = 'hidden';
       setPin('');
+      setRejectReason('');
       setError('');
       setSuccess('');
       setIsSubmitting(false);
@@ -125,6 +127,74 @@ export function GuardianApprovalModal({ isOpen, onClose, transaction, onSuccess 
     }
   };
 
+  const handleReject = async () => {
+    if (isSubmitting || pin.length !== 4) {
+      setError(
+        i18n.language === 'bn'
+          ? 'প্রত্যাখ্যানের জন্য ৪ সংখ্যার পিন দিন।'
+          : 'Please enter 4-digit PIN to reject.'
+      );
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+    setSuccess('');
+
+    const txnId = transaction.id || transaction._id;
+    const actionHash = `guardian-reject-${txnId}`;
+
+    try {
+      const stepRes = await axios.post('/api/auth/step-up', {
+        pin,
+        actionHash,
+      });
+
+      const stepUpToken = stepRes.data?.stepUpToken;
+      if (!stepUpToken) {
+        throw new Error(
+          i18n.language === 'bn'
+            ? 'স্টেপ-আপ ভেরিফিকেশন ব্যর্থ হয়েছে।'
+            : 'Step-up verification failed.'
+        );
+      }
+
+      const decideRes = await axios.post(
+        `/api/guardians/approvals/${txnId}/decide`,
+        { decision: 'reject', reason: rejectReason },
+        {
+          headers: {
+            'x-step-up-token': stepUpToken,
+            'x-action-hash': actionHash,
+          },
+        }
+      );
+
+      setSuccess(
+        i18n.language === 'bn'
+          ? 'লেনদেনটি প্রত্যাখ্যান ও বাতিল করা হয়েছে।'
+          : 'Transaction rejected successfully!'
+      );
+      setPin('');
+
+      setTimeout(() => {
+        if (onSuccess) {
+          onSuccess(decideRes.data);
+        }
+        handleClose();
+      }, 1200);
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Rejection failed';
+      let localizedMsg = msg;
+      if (msg.includes('Invalid PIN') || err.response?.status === 401) {
+        localizedMsg = i18n.language === 'bn' ? 'ভুল পিন দিয়েছেন (Invalid PIN)' : 'Invalid PIN entered.';
+      }
+      setError(localizedMsg);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const amountDisplay = (
     transaction.amountPoisha !== undefined
       ? (transaction.amountPoisha / 100).toFixed(2)
@@ -145,7 +215,9 @@ export function GuardianApprovalModal({ isOpen, onClose, transaction, onSuccess 
             <GuardianColorIcon className="w-8 h-8 shrink-0" />
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                {i18n.language === 'bn' ? 'লেনদেন অনুমোদন' : 'Approve Transaction'}
+                {actionType === 'reject'
+                  ? (i18n.language === 'bn' ? 'লেনদেন প্রত্যাখ্যান' : 'Reject Transaction')
+                  : (i18n.language === 'bn' ? 'লেনদেন অনুমোদন' : 'Approve Transaction')}
               </h3>
               <p className="text-[11px] text-slate-400">
                 {i18n.language === 'bn' ? 'অভিভাবক পিন ভেরিফিকেশন' : 'Guardian PIN Verification'}
@@ -219,11 +291,27 @@ export function GuardianApprovalModal({ isOpen, onClose, transaction, onSuccess 
 
         {/* Form */}
         <form onSubmit={handleApprove} className="space-y-4">
+          {actionType === 'reject' && (
+            <div>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                {i18n.language === 'bn' ? 'প্রত্যাখ্যানের কারণ (ঐচ্ছিক)' : 'Reason for Rejection (Optional)'}
+              </label>
+              <input
+                type="text"
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder={i18n.language === 'bn' ? 'যেমন: অপ্রয়োজনীয় খরচ' : 'e.g. Unnecessary expense'}
+                disabled={isSubmitting || !!success}
+                className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 text-xs focus:outline-none focus:ring-2 focus:ring-rose-500 disabled:opacity-50"
+              />
+            </div>
+          )}
+
           <div>
             <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5 text-center">
               {i18n.language === 'bn'
-                ? 'অনুমোদনের জন্য অভিভাবক পিন দিন'
-                : 'Enter Guardian PIN to Approve'}
+                ? 'অনুমোদন বা প্রত্যাখ্যানের জন্য পিন দিন'
+                : 'Enter Guardian PIN to Approve / Reject'}
             </label>
             <div className="relative">
               <input
@@ -259,20 +347,38 @@ export function GuardianApprovalModal({ isOpen, onClose, transaction, onSuccess 
             >
               {i18n.language === 'bn' ? 'বাতিল' : 'Cancel'}
             </button>
-            <button
-              type="submit"
-              disabled={isSubmitting || pin.length !== 4 || !!success}
-              className="flex-1 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors shadow-soft disabled:opacity-50 flex items-center justify-center gap-1.5"
-            >
-              {isSubmitting ? (
-                <span>{i18n.language === 'bn' ? 'অনুমোদন হচ্ছে...' : 'Approving...'}</span>
-              ) : (
-                <>
-                  <IoCheckmarkOutline className="w-4 h-4" />
-                  <span>{i18n.language === 'bn' ? 'অনুমোদন করুন' : 'Approve'}</span>
-                </>
-              )}
-            </button>
+            {actionType === 'reject' ? (
+              <button
+                type="button"
+                onClick={handleReject}
+                disabled={isSubmitting || pin.length !== 4 || !!success}
+                className="flex-1 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-colors shadow-soft disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                {isSubmitting ? (
+                  <span>{i18n.language === 'bn' ? 'প্রত্যাখ্যান হচ্ছে...' : 'Rejecting...'}</span>
+                ) : (
+                  <>
+                    <IoCloseOutline className="w-4 h-4" />
+                    <span>{i18n.language === 'bn' ? 'প্রত্যাখ্যান নিশ্চিত করুন' : 'Confirm Reject'}</span>
+                  </>
+                )}
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={isSubmitting || pin.length !== 4 || !!success}
+                className="flex-1 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors shadow-soft disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                {isSubmitting ? (
+                  <span>{i18n.language === 'bn' ? 'অনুমোদন হচ্ছে...' : 'Approving...'}</span>
+                ) : (
+                  <>
+                    <IoCheckmarkOutline className="w-4 h-4" />
+                    <span>{i18n.language === 'bn' ? 'অনুমোদন করুন' : 'Approve'}</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </form>
       </div>

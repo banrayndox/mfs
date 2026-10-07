@@ -326,6 +326,14 @@ export async function createStepUpToken({ userId, pin, actionHash, requiredTier 
   return stepUpToken;
 }
 
+/**
+ * Step-up authentication helper returning { stepUpToken }.
+ */
+export async function stepUp({ userId, pin, actionType, actionHash, requiredTier = 'T2' }) {
+  const stepUpToken = await createStepUpToken({ userId, pin, actionHash, requiredTier });
+  return { stepUpToken };
+}
+
 export async function verifyStepUpToken({ token, expectedActionHash, minTier = 'T2' }) {
   if (!token) {
     throw new Error('Step-up token is required for this operation (T2/T3).');
