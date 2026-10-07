@@ -162,7 +162,20 @@ This script provides an exact, reproducible sequence for demonstrating FinMate A
 
 ---
 
-#### Step 10: Conversational Logout & Session Invalidation
+#### Step 10: In-App AI Evaluation & Benchmark Transparency
+- **Presenter Action / Command**: Navigate to the **"More" (আরো)** screen and tap **"AI Benchmarks & Evaluation" (এআই মূল্যায়ন ও পারফরম্যান্স)**.
+- **Expected UI**:
+  - The comprehensive 3-tab `AiEvaluationModal` opens displaying:
+    - **Tab 1 (Benchmarks)**: Multilingual Intent Classification Accuracy (93.75%), Macro F1 (94.98%), Slot Extraction Match (100% Amount, 100% Frequency, 100% Biller, 90% Recipient), OOD Rejection (100%), and Okapi BM25 RAG Recall@1 & @3 (100%).
+    - **Tab 2 (Usability Impact)**: 78.6% task completion time reduction (42s manual vs 9s AI) and 71.4% step reduction (7 clicks vs 2 steps).
+    - **Tab 3 (Security & Boundaries)**: Cryptographic Action Hash Binding, 3-attempt PIN lockout, and role privilege enforcement architecture.
+- **Backend / Tool Invoked**:
+  - `GET /api/agent/evaluation-metrics` and `GET /api/agent/telemetry-impact`.
+- **Expected Result**: Technical evaluators and hackathon judges can inspect measured, empirical AI evaluation metrics directly inside the live running app.
+
+---
+
+#### Step 11: Conversational Logout & Session Invalidation
 - **Presenter Action / Command**: In User A's Copilot modal, type `"logout"` (or `"sign out"`).
 - **Expected UI**:
   - Copilot responds: *"Logging you out securely. Have a wonderful day!"*
@@ -176,9 +189,11 @@ This script provides an exact, reproducible sequence for demonstrating FinMate A
 
 ---
 
-### Demo Timing Guide (Total: 4 Minutes)
+### Demo Timing Guide (Total: 4.5 Minutes)
 - **0:00 - 0:45**: Introduction & Copilot Launch (Steps 1–3).
 - **0:45 - 1:45**: Spending Breakdown & Autonomous Micro-Savings (Steps 4–5).
 - **1:45 - 2:45**: AI Guardian Alert & Safe Conversational Action (Steps 6–8).
 - **2:45 - 3:30**: Multi-Client Real-Time Synchronization (Step 9).
-- **3:30 - 4:00**: Security PIN Invariant, Session Termination & Q&A (Step 10).
+- **3:30 - 4:15**: Live AI Evaluation & Usability Benchmarks Modal (Step 10).
+- **4:15 - 4:30**: Security PIN Invariant, Session Termination & Q&A (Step 11).
+

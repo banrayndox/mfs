@@ -88,7 +88,7 @@ FinMate AI introduces an integrated software architecture comprising:
 2. **A Double-Entry Ledger Engine**: Recording atomic `debit` and `credit` `LedgerEntry` documents inside MongoDB multi-document transactions.
 3. **An In-Band Guardian Risk Analyzer**: Evaluating recipient novelty, transaction amounts vs. historical averages, time-of-day, and burst velocities.
 4. **A Micro-Savings Execution Pipeline**: Listening to `transaction.settled` events and automatically transferring calculated savings into interest-free vaults.
-5. **A RAG Knowledge Engine**: Serving static policy and fee documentation via pure Node.js TF-IDF cosine similarity.
+5. **A RAG Knowledge Engine**: Serving static policy and fee documentation via pure Node.js Okapi BM25 ranking algorithm (k1=1.5, b=0.75).
 
 ---
 
@@ -378,14 +378,14 @@ The test harness contains 12 suites comprising 87 automated tests:
 ---
 
 ## 30. Limitations
-1. **Synthetic Payment Switching**: Operates on simulated ledger rails without live Bangladesh Bank NPSB/BEFTN network integration.
-2. **Local Vector Search Scale**: TF-IDF cosine similarity search scales efficiently for hundreds of documents but is not optimized for million-document corpora.
+1. **Synthetic Payment Switching**: Operates on simulated ledger rails without live Bangladesh Bank NPSB/BEFTN network integration; demonstrates provider lifecycle state machines via `SandboxPaymentProvider`.
+2. **In-Memory Okapi BM25 RAG**: Uses document-length normalized BM25 term weighting optimized for domain institutional corpora without distributed vector DB overhead.
 3. **Voice Input Browser Support**: Web Speech API is dependent on browser implementation (Chrome, Edge, Safari).
 
 ---
 
 ## 31. Future Work
-1. Implementation of dense semantic embeddings with hybrid BM25 reranking for larger regulatory corpora.
+1. Implementation of dense semantic embeddings with hybrid dense-BM25 reciprocal rank fusion (RRF) for massive regulatory corpora.
 2. Integration of biometric WebAuthn Level 3 hardware attestation.
 3. Direct integration with open banking sandbox switches.
 

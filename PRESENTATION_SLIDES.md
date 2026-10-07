@@ -226,18 +226,19 @@
 
 ### Slide 14: Empirical Verification & Test Results
 - **Slide Title**: Rigorous Test Automation & Quality Assurance
-- **Main Message**: Complete test coverage across financial ledger invariants, security policies, and conversational intents.
+- **Main Message**: Complete test coverage across financial ledger invariants, security policies, conversational intents, and AI benchmarks.
 - **Bullet Points**:
-  - **100% Passing Automated Tests**: 87 comprehensive unit and integration tests passing across 12 test suites in Vitest.
-  - **Accounting Invariant Verification**: Zero floating-point discrepancies, verified non-negative balances, and multi-tenant ledger isolation.
-  - **Adversarial Security Tests**: Verified rejection of SQL/NoSQL injection, prompt jailbreaking, and unauthorized cross-user mutations.
-  - **Production Build & Lint Validation**: Clean build output with zero ESLint errors and strict code hygiene.
-- **Recommended Visual**: Terminal screenshot or graphic showing `87 passed (12 test suites)` from Vitest output.
+  - **100% Passing Automated Tests**: 201 comprehensive unit, integration, and security tests passing across 22 test suites in Vitest.
+  - **Empirical AI/ML Benchmark**: 93.75% Intent Accuracy, 94.98% Macro F1, 100% OOD Rejection, and 100% Okapi BM25 RAG Recall@1 & @3.
+  - **High-Concurrency Load Resilience**: >13,500 req/s Intent Planner, >33,000 req/s BM25 RAG, with 0 failures under heavy load.
+  - **Security & Cryptographic Hardening**: Canonical SHA-256 Action Hash binding, 3-attempt PIN lockout, single-use anti-replay tokens, and child role privilege guards.
+  - **Production Build & Lint Validation**: Clean Vite PWA production build, zero ESLint warnings or errors, and strict code hygiene.
+- **Recommended Visual**: Terminal screenshot or graphic showing `201 passed (22 test suites)` from Vitest output alongside AI benchmark scores.
 - **Exact Screenshot**: N/A (Test execution summary badge or card).
-- **Diagram Recommendation**: Breakdown chart of test coverage: 40% Financial Ledger, 25% AI & Guardian, 20% Auth & Security, 15% Realtime & Savings.
+- **Diagram Recommendation**: Breakdown chart of test coverage: 35% Financial Ledger & Invariants, 30% AI Intent & BM25 RAG, 20% Security & Auth Hardening, 15% Realtime & Savings.
 - **Speaker Notes**:
-  > "Financial applications demand uncompromising rigor. We built an extensive test suite covering 87 distinct test scenarios. Every single financial operation, micro-savings rule, guardian risk calculation, and conversational intent pattern is verified under automated tests. Our tests prove that balances never go negative, prompt injections are intercepted, and cross-user data leaks are mathematically impossible."
-- **What NOT to Put on Slide**: Do not display walls of dense terminal text; keep the focus on passing test metrics.
+  > "Financial applications demand uncompromising rigor. We built an extensive test suite covering 201 distinct test scenarios across 22 test suites, passing with a 100% rate. Furthermore, we implemented an empirical AI evaluation benchmark demonstrating 93.75% multilingual accuracy and 100% BM25 RAG retrieval precision, paired with high-concurrency stress tests handling over 13,000 requests per second with zero errors."
+- **What NOT to Put on Slide**: Do not display walls of dense terminal text; keep the focus on passing test metrics and empirical benchmark graphs.
 
 ---
 

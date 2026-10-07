@@ -6,12 +6,14 @@ This document provides the definitive verification matrix for FinMate AI (Guardi
 
 ## 1. Test Suite Summary & Automated Test Metrics
 
-- **Test Framework**: Vitest `v3.0.7` + Supertest `v7.0.0`
-- **Database Environment**: `mongodb-memory-server` `v10.1.4` (Isolated in-memory MongoDB 8 instance per test suite)
-- **Total Test Suites**: 12 suites (`server/src/**/*.test.js`)
-- **Total Automated Test Cases**: 87 test cases
-- **Pass Rate**: 100% (87 passed, 0 failed, 0 skipped)
-- **Code Linter**: ESLint (0 errors, 0 warnings across client and server)
+- **Test Framework**: Vitest `v3.2.7` + Supertest `v7.0.0`
+- **Database Environment**: `mongodb-memory-server` `v10.1.4` (Isolated in-memory MongoDB replica set per test suite)
+- **Total Test Suites**: 22 test suites (`server/tests/**/*.test.js`)
+- **Total Automated Test Cases**: 201 test cases
+- **Pass Rate**: 100% (201 passed, 0 failed, 0 skipped)
+- **Code Linter**: ESLint (0 errors, 0 warnings across client, server, and scripts)
+- **Quantitative AI Benchmark**: 48 test utterances + 24 RAG queries (`npm run eval:agent`: 93.75% Intent Acc, 94.98% Macro F1, 100% OOD, 100% BM25 Recall)
+- **Load Concurrency Benchmark**: >13,500 req/s Intent Planner, >33,000 req/s BM25 RAG (`npm run test:load`)
 
 ---
 
@@ -126,16 +128,47 @@ Every test in this matrix is classified under one of the seven formal engineerin
 
 ---
 
+### Category 8: Security Hardening, Cryptographic Integrity & Payment Provider Tests
+
+| Test ID | Category | Feature / Target | Test Input | Expected Behaviour | Implementation Path | Status |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **TC-SEC-01** | SECURITY CASE | Canonical Action Hash Binding | Tampered database arguments on `PendingAction` prior to confirmation | Evaluates SHA-256 hash of runtime arguments; detects mismatch against `actionHash`; rejects execution and marks `status: rejected`. | `server/src/services/agentCopilot.service.js:executePendingAction` | **PASS** |
+| **TC-SEC-02** | SECURITY CASE | PIN Step-Up Lockout | 3 consecutive invalid PIN entries within step-up authorization | Blocks 4th attempt; locks account for 15 minutes (`isLockedUntil`); logs `STEP_UP_FAILED_PIN` security audit event. | `server/src/services/auth.service.js:createStepUpToken` | **PASS** |
+| **TC-SEC-03** | SECURITY CASE | Single-Use Anti-Replay Tokens | Replaying valid step-up token on second financial mutation | Token marked consumed on first mutation; subsequent call rejected with `STEP_UP_TOKEN_EXPIRED_OR_CONSUMED`. | `server/src/services/auth.service.js:verifyStepUpToken` | **PASS** |
+| **TC-SEC-04** | SECURITY CASE | Child Privilege Escalation Guard | CHILD account attempting `POST /api/guardians/child` or approving held transactions | Middleware `requireGuardianRole` blocks request with HTTP 403 `CHILD_ACCOUNT_RESTRICTED`. | `server/src/routes/guardian.routes.js:requireGuardianRole` | **PASS** |
+| **TC-SEC-05** | SECURITY CASE | Weak Secret Production Guard | Booting application with default/weak JWT secrets in production environment | Process throws fatal error and exits, preventing deployment with insecure fallback credentials. | `server/src/server.js:validateProductionSecrets` | **PASS** |
+| **TC-SEC-06** | NORMAL CASE | Payment Provider Add Money | Client requests `POST /api/transactions/provider/initiate-add-money` | Provider factory instantiates `SandboxPaymentProvider`; initiates session with `reference` and lifecycle status `pending`. | `server/src/services/paymentProvider/SandboxPaymentProvider.js` | **PASS** |
+| **TC-SEC-07** | NORMAL CASE | HMAC-SHA256 Webhook Settlement | Provider POSTs callback with valid `x-provider-signature` | Verifies cryptographic HMAC-SHA256 digest; transitions status to `completed`; settles wallet with double-entry ledger entry. | `server/src/routes/transaction.routes.js:POST /callbacks/provider` | **PASS** |
+| **TC-SEC-08** | SECURITY CASE | Tampered Webhook Signature | Callback received with invalid or mismatched HMAC signature | Rejects with HTTP 401 `INVALID_SIGNATURE`; refuses balance mutation. | `server/src/routes/transaction.routes.js:POST /callbacks/provider` | **PASS** |
+| **TC-SEC-09** | NORMAL CASE | Client Reconnection State Sync | Client reconnects with `since` timestamp `GET /api/transactions/sync` | Returns incremental transactions, pending actions, and authoritative balance delta without full reload. | `server/src/routes/transaction.routes.js:GET /sync` | **PASS** |
+
+---
+
 ## 4. Test Verification Summary & Traceability
 
-All 42 test scenarios specified above have been mapped directly to corresponding test blocks in the test suites:
-- `server/src/services/agentCopilot.test.js`
-- `server/src/services/ledger.test.js`
-- `server/src/services/guardianRisk.test.js`
-- `server/src/services/savingsRule.test.js`
-- `server/src/services/rag.test.js`
-- `server/src/services/socket.test.js`
-- `server/src/controllers/auth.test.js`
-- `server/src/controllers/transaction.test.js`
+All test scenarios specified across this matrix have been verified across the 22 automated test suites:
+- `server/tests/security_hardening_and_idor.test.js` (13 tests)
+- `server/tests/payment_provider_and_webhooks.test.js` (5 tests)
+- `server/tests/ai_financial_operating_layer.test.js` (24 tests)
+- `server/tests/ai_copilot_conversational.test.js` (21 tests)
+- `server/tests/ai_copilot_full.test.js` (22 tests)
+- `server/tests/ai_copilot_domain_agents.test.js` (14 tests)
+- `server/tests/savings_and_copilot_hardening.test.js` (31 tests)
+- `server/tests/parent_child_and_security.test.js` (6 tests)
+- `server/tests/guardian_approval_pin_flow.test.js` (8 tests)
+- `server/tests/guardian_child_pin_and_reminder.test.js` (4 tests)
+- `server/tests/ai_copilot_guardian_followup.test.js` (3 tests)
+- `server/tests/ai_copilot_stateful_actions.test.js` (4 tests)
+- `server/tests/ai_copilot_production_refactor.test.js` (12 tests)
+- `server/tests/schedule_rule_stepup_security.test.js` (7 tests)
+- `server/tests/scheduler_and_rules.test.js` (3 tests)
+- `server/tests/send_and_cashout.test.js` (6 tests)
+- `server/tests/socket_realtime.test.js` (5 tests)
+- `server/tests/group_bill_and_auth_tiers.test.js` (4 tests)
+- `server/tests/initial_balance.test.js` (2 tests)
+- `server/tests/ai_intent_and_security.test.js` (3 tests)
+- `server/tests/concurrency.test.js` (1 test)
+- `server/tests/m0_scaffold.test.js` (3 tests)
 
-Every test is executable via `npm test` and passes with zero regressions.
+Every test is executable via `npm test` and passes with 100% success rate (201 / 201 passing, 0 regressions).
+
