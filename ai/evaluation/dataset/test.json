@@ -1,0 +1,338 @@
+[
+  {
+    "id": "t-001",
+    "text": "আমার মেয়েকে ৫০০ টাকা দাও",
+    "language": "bn",
+    "intent": "SEND_MONEY",
+    "slots": { "amount": 500, "recipient": "daughter" }
+  },
+  {
+    "id": "t-002",
+    "text": "০১৭২২২২২২২২ নম্বরে ১০০০ টাকা পাঠাও",
+    "language": "bn",
+    "intent": "SEND_MONEY",
+    "slots": { "amount": 1000, "recipient": "01722222222" }
+  },
+  {
+    "id": "t-003",
+    "text": "amar meye ke 500 taka dao",
+    "language": "banglish",
+    "intent": "SEND_MONEY",
+    "slots": { "amount": 500, "recipient": "daughter" }
+  },
+  {
+    "id": "t-004",
+    "text": "send 500tk to 01733333333",
+    "language": "banglish",
+    "intent": "SEND_MONEY",
+    "slots": { "amount": 500, "recipient": "01733333333" }
+  },
+  {
+    "id": "t-005",
+    "text": "Send 500 taka to my daughter",
+    "language": "en",
+    "intent": "SEND_MONEY",
+    "slots": { "amount": 500, "recipient": "daughter" }
+  },
+  {
+    "id": "t-006",
+    "text": "Transfer 1500 to 01711111111 immediately",
+    "language": "en",
+    "intent": "SEND_MONEY",
+    "slots": { "amount": 1500, "recipient": "01711111111" }
+  },
+  {
+    "id": "t-007",
+    "text": "এজেন্ট পয়েন্ট থেকে ২০০০ টাকা ক্যাশ আউট করতে চাই",
+    "language": "bn",
+    "intent": "CASH_OUT",
+    "slots": { "amount": 2000 }
+  },
+  {
+    "id": "t-008",
+    "text": "agent theke 2000 tk cash out korbo",
+    "language": "banglish",
+    "intent": "CASH_OUT",
+    "slots": { "amount": 2000 }
+  },
+  {
+    "id": "t-009",
+    "text": "Cash out 2000 taka at agent 01744444444",
+    "language": "en",
+    "intent": "CASH_OUT",
+    "slots": { "amount": 2000, "recipient": "01744444444" }
+  },
+  {
+    "id": "t-010",
+    "text": "ডেসকো বিদ্যুৎ বিল ১২০০ টাকা পরিশোধ করো",
+    "language": "bn",
+    "intent": "PAY_BILL",
+    "slots": { "amount": 1200, "biller": "DESCO" }
+  },
+  {
+    "id": "t-011",
+    "text": "dpdc biddut bill 1500 tk pay koro",
+    "language": "banglish",
+    "intent": "PAY_BILL",
+    "slots": { "amount": 1500, "biller": "DPDC" }
+  },
+  {
+    "id": "t-012",
+    "text": "Pay my DPDC electricity bill of 1200 taka",
+    "language": "en",
+    "intent": "PAY_BILL",
+    "slots": { "amount": 1200, "biller": "DPDC" }
+  },
+  {
+    "id": "t-013",
+    "text": "০১৭৫৫৫৫৫৫৫৫ নম্বরে ৫০০ টাকা রিচার্জ করো",
+    "language": "bn",
+    "intent": "MOBILE_RECHARGE",
+    "slots": { "amount": 500, "recipient": "01755555555" }
+  },
+  {
+    "id": "t-014",
+    "text": "01755555555 e 500 tk recharge dao",
+    "language": "banglish",
+    "intent": "MOBILE_RECHARGE",
+    "slots": { "amount": 500, "recipient": "01755555555" }
+  },
+  {
+    "id": "t-015",
+    "text": "Recharge 500 taka to 01755555555",
+    "language": "en",
+    "intent": "MOBILE_RECHARGE",
+    "slots": { "amount": 500, "recipient": "01755555555" }
+  },
+  {
+    "id": "t-016",
+    "text": "আমার অ্যাকাউন্টে কত টাকা ব্যালেন্স আছে?",
+    "language": "bn",
+    "intent": "CHECK_BALANCE",
+    "slots": {}
+  },
+  {
+    "id": "t-017",
+    "text": "amar balance koto taka ase",
+    "language": "banglish",
+    "intent": "CHECK_BALANCE",
+    "slots": {}
+  },
+  {
+    "id": "t-018",
+    "text": "What is my current wallet balance?",
+    "language": "en",
+    "intent": "CHECK_BALANCE",
+    "slots": {}
+  },
+  {
+    "id": "t-019",
+    "text": "গত মাসে আমি কোন খাতে কত টাকা খরচ করেছি?",
+    "language": "bn",
+    "intent": "SPENDING_ANALYSIS",
+    "slots": {}
+  },
+  {
+    "id": "t-020",
+    "text": "amar past month er khoroch breakdown dekhaw",
+    "language": "banglish",
+    "intent": "SPENDING_ANALYSIS",
+    "slots": {}
+  },
+  {
+    "id": "t-021",
+    "text": "Show me my spending analysis for last 30 days",
+    "language": "en",
+    "intent": "SPENDING_ANALYSIS",
+    "slots": {}
+  },
+  {
+    "id": "t-022",
+    "text": "প্রতিটি লেনদেন থেকে ২% টাকা সঞ্চয় করো",
+    "language": "bn",
+    "intent": "CREATE_SAVINGS_RULE",
+    "slots": { "percentage": 2 }
+  },
+  {
+    "id": "t-023",
+    "text": "prottek transfer theke 2% save koro",
+    "language": "banglish",
+    "intent": "CREATE_SAVINGS_RULE",
+    "slots": { "percentage": 2 }
+  },
+  {
+    "id": "t-024",
+    "text": "Save 2% from every transaction automatically",
+    "language": "en",
+    "intent": "CREATE_SAVINGS_RULE",
+    "slots": { "percentage": 2 }
+  },
+  {
+    "id": "t-025",
+    "text": "আগামী শুক্রবার থেকে প্রতি সপ্তাহে ৫০০ টাকা করে দিও",
+    "language": "bn",
+    "intent": "CREATE_SCHEDULE",
+    "slots": { "amount": 500, "frequency": "weekly" }
+  },
+  {
+    "id": "t-026",
+    "text": "agami shukrobar theke 500 taka kore dio",
+    "language": "banglish",
+    "intent": "CREATE_SCHEDULE",
+    "slots": { "amount": 500, "frequency": "weekly" }
+  },
+  {
+    "id": "t-027",
+    "text": "Set a weekly allowance schedule of 500 taka",
+    "language": "en",
+    "intent": "CREATE_SCHEDULE",
+    "slots": { "amount": 500, "frequency": "weekly" }
+  },
+  {
+    "id": "t-028",
+    "text": "কাল সকাল ১০টায় বিদ্যুৎ বিল দেওয়ার কথা মনে করিয়ে দিও",
+    "language": "bn",
+    "intent": "SET_REMINDER",
+    "slots": { "category": "bills" }
+  },
+  {
+    "id": "t-029",
+    "text": "kal sokale bill dewar kotha remind me koro",
+    "language": "banglish",
+    "intent": "SET_REMINDER",
+    "slots": { "category": "bills" }
+  },
+  {
+    "id": "t-030",
+    "text": "Remind me tomorrow to pay electricity bill",
+    "language": "en",
+    "intent": "SET_REMINDER",
+    "slots": { "category": "bills" }
+  },
+  {
+    "id": "t-031",
+    "text": "রহিম ও করিমের সাথে ১৫০০ টাকার রেস্টুরেন্ট বিল স্প্লিট করো",
+    "language": "bn",
+    "intent": "SPLIT_BILL",
+    "slots": { "amount": 1500, "category": "food" }
+  },
+  {
+    "id": "t-032",
+    "text": "split 1500 taka restaurant bill with rahim and karim",
+    "language": "banglish",
+    "intent": "SPLIT_BILL",
+    "slots": { "amount": 1500, "category": "food" }
+  },
+  {
+    "id": "t-033",
+    "text": "Split 1500 restaurant bill among 3 friends",
+    "language": "en",
+    "intent": "SPLIT_BILL",
+    "slots": { "amount": 1500, "category": "food" }
+  },
+  {
+    "id": "t-034",
+    "text": "সন্তানের পেন্ডিং লেনদেন অনুমোদন করো",
+    "language": "bn",
+    "intent": "GUARDIAN_APPROVAL",
+    "slots": {}
+  },
+  {
+    "id": "t-035",
+    "text": "approve child pending transaction",
+    "language": "banglish",
+    "intent": "GUARDIAN_APPROVAL",
+    "slots": {}
+  },
+  {
+    "id": "t-036",
+    "text": "Approve my child's pending transfer request",
+    "language": "en",
+    "intent": "GUARDIAN_APPROVAL",
+    "slots": {}
+  },
+  {
+    "id": "t-037",
+    "text": "সেন্ড মানি আর ক্যাশ আউটের মধ্যে পার্থক্য ও ফি কত?",
+    "language": "bn",
+    "intent": "KNOWLEDGE_RAG",
+    "slots": {}
+  },
+  {
+    "id": "t-038",
+    "text": "send money ar cash out er charge koto taka",
+    "language": "banglish",
+    "intent": "KNOWLEDGE_RAG",
+    "slots": {}
+  },
+  {
+    "id": "t-039",
+    "text": "What are the service fees and difference between send money and cashout?",
+    "language": "en",
+    "intent": "KNOWLEDGE_RAG",
+    "slots": {}
+  },
+  {
+    "id": "t-040",
+    "text": "লগআউট করে অ্যাপ থেকে বের হয়ে যাও",
+    "language": "bn",
+    "intent": "APP_LOGOUT",
+    "slots": {}
+  },
+  {
+    "id": "t-041",
+    "text": "log me out please",
+    "language": "banglish",
+    "intent": "APP_LOGOUT",
+    "slots": {}
+  },
+  {
+    "id": "t-042",
+    "text": "Sign out and end my active session",
+    "language": "en",
+    "intent": "APP_LOGOUT",
+    "slots": {}
+  },
+  {
+    "id": "t-043",
+    "text": "আমার জন্য এমন একটা investment করে দাও যাতে guaranteed profit হয়",
+    "language": "bn",
+    "intent": "OOD_UNKNOWN",
+    "slots": {}
+  },
+  {
+    "id": "t-044",
+    "text": "amar shob taka diye bitcoin kine dao guaranteed labh hobe",
+    "language": "banglish",
+    "intent": "OOD_UNKNOWN",
+    "slots": {}
+  },
+  {
+    "id": "t-045",
+    "text": "Invest all my funds into cryptocurrency with guaranteed 50% returns",
+    "language": "en",
+    "intent": "OOD_UNKNOWN",
+    "slots": {}
+  },
+  {
+    "id": "t-046",
+    "text": "আজকে ঢাকার আবহাওয়া কেমন থাকবে বলো",
+    "language": "bn",
+    "intent": "OOD_UNKNOWN",
+    "slots": {}
+  },
+  {
+    "id": "t-047",
+    "text": "amake ekta sundor kobita shonao",
+    "language": "banglish",
+    "intent": "OOD_UNKNOWN",
+    "slots": {}
+  },
+  {
+    "id": "t-048",
+    "text": "Tell me who won the cricket world cup final in 2023",
+    "language": "en",
+    "intent": "OOD_UNKNOWN",
+    "slots": {}
+  }
+]

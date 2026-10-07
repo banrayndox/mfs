@@ -16,6 +16,7 @@ import {
   isConfirmation,
   isCancellation,
 } from './taskStateManager.js';
+import { retrieveKnowledge } from '../rag.service.js';
 import logger from '../../utils/logger.js';
 
 /**
@@ -131,16 +132,19 @@ export function evaluateSecurityBoundaries(text) {
     };
   }
 
-  // 4. Irrelevant Non-Financial Queries
+  // 4. Irrelevant Non-Financial Queries (Bangla, Banglish, English)
   const irrelevantPatterns = [
     'capital of',
     'weather',
+    'abhowa',
     'write a poem',
     'write poem',
     'poem',
+    'kobita',
     'tell me a joke',
     'tell a joke',
     'joke',
+    'koutuk',
     'write python',
     'write code',
     'python code',
@@ -148,6 +152,8 @@ export function evaluateSecurityBoundaries(text) {
     'coding',
     'who won',
     'world cup',
+    'cricket',
+    'football',
     'recipe',
     'recipes',
     'how to cook',
@@ -158,10 +164,13 @@ export function evaluateSecurityBoundaries(text) {
     'solve this math',
     'trivia',
     'আবহাওয়া',
+    'আবহাওয়া',
     'কবিতা',
     'কৌতুক',
     'রান্নার রেসিপি',
     'গান গাও',
+    'গান শোনাও',
+    'shonao',
   ];
 
   if (irrelevantPatterns.some((p) => lower.includes(p))) {
@@ -169,6 +178,38 @@ export function evaluateSecurityBoundaries(text) {
       isSecurityViolation: true,
       type: 'irrelevant',
       reason: 'Query is unrelated to financial services.',
+    };
+  }
+
+  // 5. Speculative Schemes / Guaranteed Returns / High-Risk Trading (OOD Defense)
+  const speculativePatterns = [
+    'guaranteed profit',
+    'guaranteed return',
+    'guaranteed returns',
+    'guaranteed investment',
+    'guaranteed labh',
+    'guaranteed',
+    'cryptocurrency',
+    'crypto',
+    'bitcoin',
+    'ethereum',
+    'forex trading',
+    'forex',
+    'lottery',
+    'casino',
+    'সুনিশ্চিত লাভ',
+    'গ্যারান্টিড লাভ',
+    'গ্যারান্টিড প্রফিট',
+    'বিটকয়েন',
+    'ক্রিপ্টো',
+    'লটারি',
+  ];
+
+  if (speculativePatterns.some((p) => lower.includes(p))) {
+    return {
+      isSecurityViolation: true,
+      type: 'unsupported_financial_scheme',
+      reason: 'Speculative trading, crypto investments, and guaranteed return schemes are not supported by Guardian MFS.',
     };
   }
 
@@ -621,7 +662,28 @@ function planWithSemanticEngine({ text, normalized, lower, taskState, language }
   }
 
   // ==========================================
-  // 6. CHILD / FAMILY / GUARDIAN ACCOUNT
+  // 6. GUARDIAN APPROVAL & PERMISSIONS
+  // ==========================================
+  if (
+    lower.includes('approve') ||
+    lower.includes('অনুমোদন') ||
+    lower.includes('onumodon') ||
+    (lower.includes('child') && lower.includes('pending')) ||
+    (lower.includes('সন্তান') && (lower.includes('অনুমোদন') || lower.includes('পেন্ডিং') || lower.includes('লেনদেন')))
+  ) {
+    return {
+      intent: 'guardian_approve',
+      tool: 'guardian_approval',
+      parameters: {},
+      missing_fields: [],
+      confirmation_required: true,
+      risk_level: 'high',
+      confidence: 0.98,
+    };
+  }
+
+  // ==========================================
+  // 6b. CHILD / FAMILY / GUARDIAN ACCOUNT
   // ==========================================
   const isChildAction =
     lower.includes('child add') ||
@@ -669,10 +731,10 @@ function planWithSemanticEngine({ text, normalized, lower, taskState, language }
   // ==========================================
   // 7. SAVINGS & MICRO-SAVINGS
   // ==========================================
-  // Percentage Savings: "Save 2% from every transaction"
+  // Percentage Savings: "Save 2% from every transaction", "২% টাকা সঞ্চয় করো"
   if (
-    (lower.includes('save') || lower.includes('সঞ্চয়') || lower.includes('সেভিংস')) &&
-    (lower.includes('%') || lower.includes('percent') || lower.includes('পার্সেন্ট'))
+    (lower.includes('save') || lower.includes('সঞ্চয়') || lower.includes('সঞ্চয়') || lower.includes('সেভিংস')) &&
+    (lower.includes('%') || lower.includes('percent') || lower.includes('পার্সেন্ট') || lower.includes('শতাংশ'))
   ) {
     const pctMatch = text.match(/([0-9]+(?:\.[0-9]+)?)\s*%/);
     const pct = pctMatch ? parseFloat(pctMatch[1]) : 2;
@@ -783,13 +845,19 @@ function planWithSemanticEngine({ text, normalized, lower, taskState, language }
     };
   }
 
-  // Total Spending Summary
+  // Total Spending Summary / Spending Analysis
   if (
     lower.includes('how much did i spend') ||
     lower.includes('total spend') ||
+    lower.includes('spending analysis') ||
+    lower.includes('spending breakdown') ||
+    lower.includes('spending') ||
     lower.includes('কত টাকা খরচ') ||
     lower.includes('এই মাসে কত খরচ') ||
-    lower.includes('মোট খরচ কত')
+    lower.includes('মোট খরচ কত') ||
+    lower.includes('খরচ করেছি') ||
+    lower.includes('khoroch') ||
+    lower.includes('খাতে কত')
   ) {
     return {
       intent: 'spending_summary',
@@ -830,7 +898,7 @@ function planWithSemanticEngine({ text, normalized, lower, taskState, language }
   // ==========================================
   // 9. AUTOMATION: SCHEDULES & RULES
   // ==========================================
-  // Recurring: "Every month on the 5th...", "Every Friday send..."
+  // Recurring: "Every month on the 5th...", "Every Friday send...", "agami shukrobar theke 500 taka kore dio"
   const isRecurring =
     lower.includes('every month') ||
     lower.includes('every week') ||
@@ -839,7 +907,11 @@ function planWithSemanticEngine({ text, normalized, lower, taskState, language }
     lower.includes('প্রতি মাসে') ||
     lower.includes('প্রতি সপ্তাহে') ||
     lower.includes('প্রতি শুক্রবার') ||
-    lower.includes('নিয়মিত');
+    lower.includes('নিয়মিত') ||
+    lower.includes('weekly') ||
+    lower.includes('monthly') ||
+    lower.includes('kore dio') ||
+    lower.includes('করে দিও');
 
   if (isRecurring) {
     return {
@@ -931,7 +1003,8 @@ function planWithSemanticEngine({ text, normalized, lower, taskState, language }
   // 10. IMMEDIATE MONEY MUTATIONS: SEND / CASHOUT / RECHARGE / BILL / ADD / REQUEST
   // ==========================================
   // Cash Out: "2000 taka cashout koro", "cash out 500"
-  if (lower.includes('cash out') || lower.includes('cashout') || lower.includes('ক্যাশ আউট') || lower.includes('ক্যাশআউট')) {
+  const isCashOutKnowledge = lower.includes('difference') || lower.includes('পার্থক্য') || lower.includes('parthokko') || lower.includes('fee') || lower.includes('ফি') || lower.includes('charge') || lower.includes('চার্জ');
+  if (!isCashOutKnowledge && (lower.includes('cash out') || lower.includes('cashout') || lower.includes('ক্যাশ আউট') || lower.includes('ক্যাশআউট'))) {
     return {
       intent: 'cash_out',
       tool: 'cash_out',
@@ -1021,7 +1094,8 @@ function planWithSemanticEngine({ text, normalized, lower, taskState, language }
   }
 
   // Bill Payment: "Pay electricity bill 1200", "বিদ্যুৎ বিল দাও"
-  if (lower.includes('bill') || lower.includes('বিল')) {
+  const isBillReminderOrSplit = lower.includes('remind') || lower.includes('মনে করিয়ে') || lower.includes('মনে করিয়ে') || lower.includes('split') || lower.includes('স্প্লিট') || lower.includes('ভাগ');
+  if (!isBillReminderOrSplit && (lower.includes('bill') || lower.includes('বিল'))) {
     let billerId = 'DPDC';
     if (lower.includes('desco') || lower.includes('ডেসকো')) billerId = 'DESCO';
     else if (lower.includes('wasa') || lower.includes('ওয়াসা')) billerId = 'Dhaka WASA';
@@ -1088,7 +1162,7 @@ function planWithSemanticEngine({ text, normalized, lower, taskState, language }
   }
 
   // Send Money / Transfer:
-  // "Send 500 to Rahim", "রাকিবকে ৫০০ টাকা পাঠাও", "রাকিবের কাছে 500 টাকা send করো", "send 500 taka to Rakib", "Rakib কে পাঁচশো পাঠিয়ে দাও"
+  // "Send 500 to Rahim", "রাকিবকে ৫০০ টাকা পাঠাও", "আমার মেয়েকে ৫০০ টাকা দাও", "amar meye ke 500 taka dao"
   const isSendMoney =
     lower.includes('send') ||
     lower.includes('pathao') ||
@@ -1096,24 +1170,39 @@ function planWithSemanticEngine({ text, normalized, lower, taskState, language }
     lower.includes('পাঠিয়ে দাও') ||
     lower.includes('ট্রান্সফার') ||
     lower.includes('transfer') ||
-    lower.includes('টাকা দাও');
+    lower.includes('টাকা দাও') ||
+    lower.includes('taka dao') ||
+    lower.includes('taka dio') ||
+    lower.includes('টাকা পাঠাও') ||
+    (lower.includes('দাও') && (amountBdt !== null || lower.includes('টাকা') || lower.includes('মেয়ে') || lower.includes('মেয়ে') || lower.includes('ছেলে') || lower.includes('কে'))) ||
+    (/(?:dao|dio|দাও|পাঠাও)(?:$|\s|[.,!?])/i.test(lower) && (amountBdt !== null || lower.includes('taka') || lower.includes('টাকা') || lower.includes('meye') || lower.includes('daughter') || lower.includes('ke') || lower.includes('কে')));
 
   if (isSendMoney) {
-    // Extract recipient: e.g. "Rahim ke", "to Rahim", "Rahim কে"
+    // Extract recipient: e.g. "Rahim ke", "to Rahim", "Rahim কে", "daughter", "meye", phone number
     const phoneMatch = normalized.match(/(?:01[3-9]\d{8})/);
     let recipient = phoneMatch ? phoneMatch[0] : null;
 
     if (!recipient) {
-      const recipientMatch =
-        text.match(/([a-zA-Z\u0980-\u09FF]+)\s+(?:কাছে|kache)/i) ||
-        text.match(/([a-zA-Z\u0980-\u09FF]+?)\s*(?:-কে|কে|-ke|ke)/i) ||
-        text.match(/(?:to|send to|কাছে)\s+([a-zA-Z\u0980-\u09FF]+)/i) ||
-        text.match(/Send\s+[0-9]+\s+(?:to\s+)?([a-zA-Z\u0980-\u09FF]+)/i);
+      if (lower.includes('meye') || lower.includes('daughter') || lower.includes('মেয়ে') || lower.includes('মেয়ে')) {
+        recipient = 'daughter';
+      } else if (lower.includes('chele') || lower.includes('son') || lower.includes('ছেলে')) {
+        recipient = 'son';
+      } else if (lower.includes('ammu') || lower.includes('ma') || lower.includes('mother') || lower.includes('মা') || lower.includes('আম্মু')) {
+        recipient = 'mother';
+      } else if (lower.includes('abbu') || lower.includes('baba') || lower.includes('father') || lower.includes('বাবা') || lower.includes('আব্বু')) {
+        recipient = 'father';
+      } else {
+        const recipientMatch =
+          text.match(/([a-zA-Z\u0980-\u09FF]+)\s+(?:কাছে|kache)/i) ||
+          text.match(/([a-zA-Z\u0980-\u09FF]+?)\s*(?:-কে|কে|-ke|ke)/i) ||
+          text.match(/(?:to|send to|কাছে)\s+([a-zA-Z\u0980-\u09FF]+)/i) ||
+          text.match(/Send\s+[0-9]+\s+(?:to\s+)?([a-zA-Z\u0980-\u09FF]+)/i);
 
-      if (recipientMatch && recipientMatch[1]) {
-        recipient = recipientMatch[1]
-          .trim()
-          .replace(/(?:-এর|এর|ের|র|-er|er|-কে|কে|-ke|ke)$/i, '');
+        if (recipientMatch && recipientMatch[1]) {
+          recipient = recipientMatch[1]
+            .trim()
+            .replace(/(?:-এর|এর|ের|র|-er|er|-কে|কে|-ke|ke)$/i, '');
+        }
       }
     }
 
@@ -1206,12 +1295,33 @@ function planWithSemanticEngine({ text, normalized, lower, taskState, language }
   // ==========================================
   // 12. KNOWLEDGE & FAQ QUERY (RAG)
   // ==========================================
+  const ragMatches = retrieveKnowledge(text, { minScore: 0.15, topK: 1 });
+  if (ragMatches.length > 0) {
+    return {
+      intent: 'knowledge',
+      tool: 'knowledge_query',
+      parameters: { query: text, docId: ragMatches[0].id },
+      missing_fields: [],
+      confidence: ragMatches[0].score,
+      retrievedDoc: ragMatches[0],
+    };
+  }
+
+  // ==========================================
+  // 13. OUT-OF-DISTRIBUTION (OOD) / UNKNOWN INTENT
+  // ==========================================
   return {
-    intent: 'knowledge',
-    tool: 'knowledge_query',
-    parameters: { query: text },
+    intent: 'unknown_ood',
+    tool: null,
+    parameters: { rawText: text },
     missing_fields: [],
-    confidence: 0.85,
+    clarification_required: true,
+    confirmation_required: false,
+    confidence: 0.20,
+    isOutOfDistribution: true,
+    question: language === 'bn'
+      ? 'দুঃখিত, আমি আপনার অনুরোধটি পুরোপুরি বুঝতে পারিনি। আপনি কি সেন্ড মানি, ক্যাশ আউট, বিল পে, মোবাইল রিচার্জ বা সেভিংস সম্পর্কে জানতে চান?'
+      : 'I am sorry, I could not understand your request. Would you like to Send Money, Cash Out, Pay a Bill, Recharge, or manage Savings?',
   };
 }
 

@@ -305,9 +305,38 @@ export async function createStepUpToken({ userId, pin, actionHash, requiredTier 
   const user = await User.findById(userId);
   if (!user) throw new Error('User not found.');
 
+  // Check lockout
+  if (user.lockoutUntil && user.lockoutUntil > new Date()) {
+    const minutesLeft = Math.ceil((user.lockoutUntil.getTime() - Date.now()) / 60000);
+    throw new Error(`Account locked due to multiple failed attempts. Please try again in ${minutesLeft} minutes.`);
+  }
+
   const isPinValid = await bcrypt.compare(pin, user.pinHash);
   if (!isPinValid) {
+    user.failedPinAttempts += 1;
+    if (user.failedPinAttempts >= 3) {
+      user.lockoutUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 min lock
+      user.status = 'locked';
+    }
+    await user.save();
+
+    await AuditLog.create({
+      userId: user._id,
+      action: 'STEP_UP_FAILED_PIN',
+      actorType: 'user',
+      status: 'failure',
+      details: { failedAttempts: user.failedPinAttempts, actionHash },
+    });
+
     throw new Error('Invalid PIN.');
+  }
+
+  // Reset failed attempts on success
+  if (user.failedPinAttempts > 0 || user.status === 'locked') {
+    user.failedPinAttempts = 0;
+    user.lockoutUntil = null;
+    if (user.status === 'locked') user.status = 'active';
+    await user.save();
   }
 
   // Generate single-use step-up token valid for 60 seconds bound to actionHash
@@ -325,6 +354,7 @@ export async function createStepUpToken({ userId, pin, actionHash, requiredTier 
 
   return stepUpToken;
 }
+
 
 /**
  * Step-up authentication helper returning { stepUpToken }.

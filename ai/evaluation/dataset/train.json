@@ -1,0 +1,17 @@
+[
+  { "text": "৫০০ টাকা পাঠাও রহিমের কাছে", "language": "bn", "intent": "SEND_MONEY", "slots": { "amount": 500, "recipient": "rahim" } },
+  { "text": "send 2000 bdt to 01811111111", "language": "en", "intent": "SEND_MONEY", "slots": { "amount": 2000, "recipient": "01811111111" } },
+  { "text": "agent theke cash out korbo 3000", "language": "banglish", "intent": "CASH_OUT", "slots": { "amount": 3000 } },
+  { "text": "বিদ্যুৎ বিল ৫০০ টাকা", "language": "bn", "intent": "PAY_BILL", "slots": { "amount": 500, "biller": "DPDC" } },
+  { "text": "recharge 200 tk to 01911111111", "language": "banglish", "intent": "MOBILE_RECHARGE", "slots": { "amount": 200, "recipient": "01911111111" } },
+  { "text": "amar balance dekhaw", "language": "banglish", "intent": "CHECK_BALANCE", "slots": {} },
+  { "text": "koto khoroch hoise ei mashe", "language": "banglish", "intent": "SPENDING_ANALYSIS", "slots": {} },
+  { "text": "10% micro savings chalu koro", "language": "banglish", "intent": "CREATE_SAVINGS_RULE", "slots": { "percentage": 10 } },
+  { "text": "shob shukrobar 200 taka send koro", "language": "banglish", "intent": "CREATE_SCHEDULE", "slots": { "amount": 200, "frequency": "weekly" } },
+  { "text": "kal rate remind me", "language": "banglish", "intent": "SET_REMINDER", "slots": {} },
+  { "text": "friends der shathe bill split koro", "language": "banglish", "intent": "SPLIT_BILL", "slots": {} },
+  { "text": "approve my child", "language": "en", "intent": "GUARDIAN_APPROVAL", "slots": {} },
+  { "text": "service charge schedule koto", "language": "banglish", "intent": "KNOWLEDGE_RAG", "slots": {} },
+  { "text": "logout", "language": "en", "intent": "APP_LOGOUT", "slots": {} },
+  { "text": "weather today", "language": "en", "intent": "OOD_UNKNOWN", "slots": {} }
+]

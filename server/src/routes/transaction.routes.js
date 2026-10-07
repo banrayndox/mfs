@@ -6,11 +6,15 @@ import {
   payBill,
   mobileRecharge,
   addMoney,
+  initiateAddMoneyViaProvider,
+  settleProviderTransaction,
 } from '../services/transaction.service.js';
+import { getPaymentProvider } from '../services/paymentProvider/index.js';
 import mongoose from 'mongoose';
 import { User, Wallet, Transaction, AiTip, LinkedAccount, SavingsPlan } from '../models/index.js';
 import { notifyWalletUpdate, notifySavingsPlanUpdate } from '../services/socket.service.js';
 import { getMicroSavingsConfig, configureMicroSavings } from '../services/microSavings.service.js';
+
 
 export const transactionRouter = express.Router();
 
@@ -53,7 +57,43 @@ transactionRouter.get('/balance', requireAuth, async (req, res, next) => {
   }
 });
 
+// Unified State Synchronization Endpoint for Disconnect Recovery
+transactionRouter.get('/sync', requireAuth, async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const since = req.query.since ? new Date(req.query.since) : new Date(Date.now() - 24 * 3600 * 1000);
+
+    const [wallet, recentTransactions, unreadNotifications, activeSavings] = await Promise.all([
+      Wallet.findOne({ userId, type: { $in: ['primary', 'agent'] } }),
+      Transaction.find({
+        $or: [{ senderUserId: userId }, { recipientUserId: userId }],
+        createdAt: { $gte: since },
+      })
+        .sort({ createdAt: -1 })
+        .limit(20),
+      Notification.find({ userId, isRead: false }).sort({ createdAt: -1 }).limit(10),
+      SavingsPlan.find({ userId, status: 'active' }),
+    ]);
+
+    res.json({
+      success: true,
+      serverTime: new Date().toISOString(),
+      wallet: {
+        balancePoisha: wallet ? wallet.balance : 0,
+        dailySpendPoisha: wallet?.dailySpendPoisha || 0,
+        status: wallet?.status || 'active',
+      },
+      transactions: recentTransactions,
+      unreadNotifications,
+      activeSavings,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Send Money (Requires Tier 2)
+
 transactionRouter.post('/send', requireAuth, requireTier('T2'), async (req, res, next) => {
   try {
     const { recipientPhone, amountPoisha, idempotencyKey } = req.body;
@@ -607,5 +647,59 @@ transactionRouter.delete('/savings-plans/:id', requireAuth, async (req, res, nex
   }
 });
 
+// Initiate Asynchronous Add Money via Payment Provider Gateway
+transactionRouter.post('/provider/initiate-add-money', requireAuth, async (req, res, next) => {
+  try {
+    const { amountPoisha, bankName, providerName, idempotencyKey } = req.body;
+    const result = await initiateAddMoneyViaProvider({
+      userId: req.user._id,
+      amountPoisha: Number(amountPoisha),
+      bankName,
+      providerName: providerName || 'sandbox',
+      idempotencyKey,
+    });
+    res.status(201).json({ success: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Upstream Payment Provider Webhook Callback (HMAC-SHA256 Signed)
+transactionRouter.post('/callbacks/provider', async (req, res, next) => {
+  try {
+    const signature = req.headers['x-provider-signature'] || req.headers['x-webhook-signature'];
+    const provider = getPaymentProvider('sandbox');
+
+    const verification = await provider.handleWebhook({
+      payload: req.body,
+      signature,
+    });
+
+    if (!verification.isValid) {
+      return res.status(401).json({
+        success: false,
+        code: 'INVALID_SIGNATURE',
+        message: verification.error || 'Cryptographic HMAC signature verification failed.',
+      });
+    }
+
+    const settledTxn = await settleProviderTransaction({
+      providerReference: verification.providerReference,
+      status: verification.status,
+      failureReason: verification.failureReason,
+    });
+
+    res.json({
+      success: true,
+      received: true,
+      status: settledTxn.status,
+      providerReference: verification.providerReference,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default transactionRouter;
+
 

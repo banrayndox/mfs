@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChangePinModal } from '../components/modals/ChangePinModal.jsx';
-import { IoInformationCircleOutline } from 'react-icons/io5';
+import { AiEvaluationModal } from '../components/modals/AiEvaluationModal.jsx';
+import { IoInformationCircleOutline, IoStatsChartOutline } from 'react-icons/io5';
 import {
   KeyPinColorIcon,
   LanguageColorIcon,
@@ -22,6 +23,8 @@ export function More({ onOpenAuth, onLogout }) {
   const { user } = useAuthStore();
   const { canInstall, isInstalled, promptInstall } = usePWAInstall();
   const [isChangePinOpen, setIsChangePinOpen] = useState(false);
+  const [isAiEvaluationOpen, setIsAiEvaluationOpen] = useState(false);
+
 
   const toggleLanguage = () => {
     const nextLang = i18n.language === 'bn' ? 'en' : 'bn';
@@ -88,12 +91,26 @@ export function More({ onOpenAuth, onLogout }) {
       ],
     },
     {
+      title: i18n.language === 'bn' ? 'এআই নিরীক্ষা ও কার্যকারিতা (AI Evaluation)' : 'AI Benchmarks & Evaluation',
+      items: [
+        {
+          id: 'ai-metrics',
+          icon: IoStatsChartOutline,
+          label: i18n.language === 'bn' ? 'এআই মূল্যায়ন ও পারফরম্যান্স (AI Metrics)' : 'AI Evaluation & Benchmarks',
+          subtitle: i18n.language === 'bn' ? 'লাইভ এনএলইউ সঠিকতা, স্লট এবং সময় সাশ্রয় মেট্রিক্স' : 'Live NLU accuracy, slot extraction & time savings',
+          action: () => setIsAiEvaluationOpen(true),
+          badge: '93.8% F1',
+        },
+      ],
+    },
+    {
       title: t('more.support'),
       items: [
         { id: 'faq', icon: FaqColorIcon, label: 'সহায়তা ও প্রশ্নোত্তর (FAQ)', subtitle: '২৪/৭ গ্রাহক সেবা' },
       ],
     },
   ];
+
 
   return (
     <>
@@ -156,6 +173,9 @@ export function More({ onOpenAuth, onLogout }) {
 
     {/* Change PIN Modal (rendered outside space-y-5) */}
     <ChangePinModal isOpen={isChangePinOpen} onClose={() => setIsChangePinOpen(false)} />
+
+    {/* AI Evaluation & Benchmarks Modal */}
+    <AiEvaluationModal isOpen={isAiEvaluationOpen} onClose={() => setIsAiEvaluationOpen(false)} />
   </>
   );
 }

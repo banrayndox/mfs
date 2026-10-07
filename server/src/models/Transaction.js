@@ -68,13 +68,23 @@ const TransactionSchema = new mongoose.Schema(
         'risk_checked',
         'awaiting_guardian',
         'authorized',
+        'processing',
         'settled',
         'failed',
         'cancelled',
         'expired',
+        'reversed',
       ],
       default: 'initiated',
       index: true,
+    },
+    providerReference: {
+      type: String,
+      index: true,
+      sparse: true,
+    },
+    providerStatus: {
+      type: String,
     },
     risk: {
       score: { type: Number, default: 0 },
@@ -101,6 +111,7 @@ const TransactionSchema = new mongoose.Schema(
     errorMessage: {
       type: String,
     },
+
   },
   { timestamps: true }
 );
@@ -108,6 +119,9 @@ const TransactionSchema = new mongoose.Schema(
 // Compound index for querying user history efficiently
 TransactionSchema.index({ senderUserId: 1, createdAt: -1 });
 TransactionSchema.index({ recipientUserId: 1, createdAt: -1 });
+TransactionSchema.index({ type: 1, createdAt: -1 });
+TransactionSchema.index({ status: 1, createdAt: -1 });
 
 export const Transaction = mongoose.model('Transaction', TransactionSchema);
 export default Transaction;
+

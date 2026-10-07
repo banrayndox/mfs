@@ -17,10 +17,12 @@
     "train:risk": "node server/scripts/train-risk.js",
     "eval:risk": "node server/scripts/eval-risk.js",
     "eval:agent": "node server/scripts/eval-agent.js",
+    "test:load": "node server/scripts/load-test.js",
     "test": "vitest run -c server/vitest.config.js",
     "lint": "eslint client/src server/src server/scripts",
     "format": "prettier --check \"{client,server}/**/*.{js,jsx,json,css,md}\"",
     "build": "npm run build --workspace=client"
+
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

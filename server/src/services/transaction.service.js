@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import mongoose from 'mongoose';
 import { User, Wallet, Transaction, AuditLog, Notification } from '../models/index.js';
 import { executeLedgerTransfer, executeLedgerDebit, executeLedgerCredit } from './ledger.service.js';
@@ -6,6 +7,8 @@ import { createAiTipForTransaction } from './aiTip.service.js';
 import { eventBus } from './eventBus.js';
 import logger from '../utils/logger.js';
 import { notifyWalletUpdate, notifyNewNotification, notifyGuardianApprovalRequired } from './socket.service.js';
+import { getPaymentProvider } from './paymentProvider/index.js';
+
 
 /**
  * Send Money (Wallet -> Wallet)
@@ -769,10 +772,156 @@ export async function addMoney({
   }
 }
 
+/**
+ * Initiates an asynchronous Add Money checkout order via an external Payment Provider (e.g. Sandbox gateway).
+ */
+export async function initiateAddMoneyViaProvider({
+  userId,
+  amountPoisha,
+  bankName = 'Upay Sandbox Gateway',
+  providerName = 'sandbox',
+  idempotencyKey,
+}) {
+  if (!userId || !amountPoisha || amountPoisha <= 0) {
+    throw new Error('Valid user and amount are required.');
+  }
+
+  const user = await User.findById(userId);
+  if (!user || user.status !== 'active') {
+    throw new Error('User not found or inactive.');
+  }
+
+  const wallet = await Wallet.findOne({ userId, type: 'primary' });
+  if (!wallet) throw new Error('Primary wallet not found.');
+
+  const key = idempotencyKey || `prov-add-${userId}-${Date.now()}`;
+  const existing = await Transaction.findOne({ idempotencyKey: key });
+  if (existing) return existing;
+
+  const provider = getPaymentProvider(providerName);
+
+  const txn = await Transaction.create({
+    recipientWalletId: wallet._id,
+    recipientUserId: userId,
+    type: 'add_money',
+    channel: 'ui',
+    amount: amountPoisha,
+    fee: 0,
+    total: amountPoisha,
+    status: 'processing',
+    idempotencyKey: key,
+    metadata: {
+      bankName,
+      provider: provider.name,
+      bdtAmount: amountPoisha / 100,
+    },
+  });
+
+  const initiated = await provider.initiatePayment({
+    txnId: txn._id,
+    amountPoisha,
+    customerPhone: user.phone,
+    metadata: { bankName },
+  });
+
+  txn.providerReference = initiated.providerReference;
+  txn.providerStatus = initiated.status;
+  await txn.save();
+
+  return {
+    txn,
+    checkoutUrl: initiated.checkoutUrl,
+    providerReference: initiated.providerReference,
+    status: initiated.status,
+  };
+}
+
+/**
+ * Handles upstream webhook / settlement resolution for an external payment provider transaction.
+ */
+export async function settleProviderTransaction({ providerReference, status, failureReason }) {
+  const txn = await Transaction.findOne({ providerReference });
+  if (!txn) {
+    throw new Error(`Transaction with provider reference ${providerReference} not found.`);
+  }
+
+  if (txn.status === 'settled' || txn.status === 'failed') {
+    return txn;
+  }
+
+  if (status === 'SUCCESS') {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      txn.status = 'settled';
+      txn.providerStatus = 'SUCCESS';
+      await txn.save({ session });
+
+      await executeLedgerCredit({
+        txnId: txn._id,
+        walletId: txn.recipientWalletId,
+        amountPoisha: txn.amount,
+        description: `Add Money settled via ${txn.metadata?.bankName || 'Payment Provider'}`,
+        session,
+      });
+
+      const notifs = await Notification.create(
+        [
+          {
+            userId: txn.recipientUserId,
+            title: 'টাকা যোগ সফল (Add Money Settled)',
+            body: `৳${(txn.amount / 100).toFixed(2)} সফলভাবে ওয়ালেটে জমা হয়েছে।`,
+            type: 'transaction',
+            metadata: { txnId: txn._id, providerReference },
+          },
+        ],
+        { session }
+      );
+
+      await session.commitTransaction();
+
+      // Realtime notification & updates
+      const updatedWallet = await Wallet.findById(txn.recipientWalletId);
+      notifyWalletUpdate(txn.recipientUserId, {
+        balancePoisha: updatedWallet?.balance || 0,
+        transaction: txn,
+      });
+      if (notifs[0]) notifyNewNotification(txn.recipientUserId, notifs[0]);
+
+      eventBus.emit('transaction.settled', txn);
+      eventBus.emit('wallet.credit', {
+        userId: txn.recipientUserId,
+        walletId: txn.recipientWalletId,
+        amountPoisha: txn.amount,
+        senderPhone: txn.metadata?.bankName || 'Provider',
+      });
+
+      return txn;
+    } catch (err) {
+      await session.abortTransaction();
+      throw err;
+    } finally {
+      session.endSession();
+    }
+  } else {
+    txn.status = 'failed';
+    txn.providerStatus = 'FAILED';
+    txn.errorMessage = failureReason || 'Provider transaction failed';
+    await txn.save();
+
+    notifyWalletUpdate(txn.recipientUserId, { transaction: txn });
+    return txn;
+  }
+}
+
 export default {
   sendMoney,
   cashOut,
   payBill,
   mobileRecharge,
   addMoney,
+  initiateAddMoneyViaProvider,
+  settleProviderTransaction,
 };
+

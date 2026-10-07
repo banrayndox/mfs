@@ -4336,9 +4336,36 @@ export async function executePendingAction({ actionId, userId }) {
     throw new Error('This action has expired. Please initiate the request again.');
   }
 
+  // Cryptographic Action Hash Binding Verification (Security Hardening):
+  // Recalculate canonical hash from stored args to guarantee payload hasn't been tampered with
+  if (action.actionHash) {
+    const rawArgs = { ...(action.args?.toObject ? action.args.toObject() : action.args) };
+    const actionType = rawArgs.actionType || action.tool;
+    const cleanArgs = { ...rawArgs };
+    delete cleanArgs.actionType;
+
+    const computedClean = computeCanonicalActionHash({
+      actionId: action.actionId,
+      actionType,
+      args: cleanArgs,
+    });
+    const computedDirect = computeCanonicalActionHash({
+      actionId: action.actionId,
+      actionType,
+      args: rawArgs,
+    });
+
+    if (action.actionHash !== computedClean && action.actionHash !== computedDirect) {
+      action.status = 'rejected';
+      await action.save();
+      throw new Error('Action integrity violation: Canonical action hash mismatch. Execution rejected.');
+    }
+  }
+
   clearActiveTask(userId);
   return executePendingActionTool({ action, userId });
 }
+
 
 export default {
   classifyIntent,

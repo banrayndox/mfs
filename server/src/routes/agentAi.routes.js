@@ -186,4 +186,35 @@ agentAiRouter.post('/savings/configure', requireAuth, async (req, res, next) => 
   }
 });
 
+// AI / ML Benchmark Evaluation Quantitative Metrics
+agentAiRouter.get('/evaluation-metrics', async (req, res, next) => {
+  try {
+    const { runFullEvaluation } = await import('../../../ai/evaluation/evaluate.js');
+    const report = await runFullEvaluation();
+    res.json({
+      success: true,
+      metrics: report,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Business Impact & Efficiency Telemetry Metrics
+agentAiRouter.get('/telemetry-impact', async (req, res, next) => {
+  try {
+    const { getBusinessImpactMetrics } = await import('../services/telemetry.service.js');
+    const impact = getBusinessImpactMetrics();
+    res.json({
+      success: true,
+      impact,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default agentAiRouter;
+
+
+

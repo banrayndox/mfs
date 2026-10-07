@@ -49,10 +49,11 @@ const PendingActionSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'executed', 'cancelled', 'expired'],
+      enum: ['pending', 'executed', 'cancelled', 'expired', 'rejected'],
       default: 'pending',
       index: true,
     },
+
     expiresAt: {
       type: Date,
       required: true,

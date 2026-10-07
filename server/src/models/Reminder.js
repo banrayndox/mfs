@@ -41,5 +41,9 @@ const ReminderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+ReminderSchema.index({ isCompleted: 1, dueAt: 1 });
+ReminderSchema.index({ userId: 1, isCompleted: 1, dueAt: 1 });
+
 export const Reminder = mongoose.model('Reminder', ReminderSchema);
 export default Reminder;
+

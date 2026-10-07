@@ -6,6 +6,7 @@ export default [
       '**/.system_generated/**',
       '**/coverage/**',
       '**/package-lock.json',
+      '**/._*',
     ],
   },
   {

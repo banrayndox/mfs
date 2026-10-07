@@ -1,0 +1,170 @@
+[
+  {
+    "id": "rag-01",
+    "query": "সেন্ড মানি আর ক্যাশ আউটের মধ্যে পার্থক্য কী?",
+    "language": "bn",
+    "expectedDocId": "kb-send-vs-cashout",
+    "category": "services"
+  },
+  {
+    "id": "rag-02",
+    "query": "Difference between Send Money and Cash Out",
+    "language": "en",
+    "expectedDocId": "kb-send-vs-cashout",
+    "category": "services"
+  },
+  {
+    "id": "rag-03",
+    "query": "send money ar cashout er moddhe parthokko ki",
+    "language": "banglish",
+    "expectedDocId": "kb-send-vs-cashout",
+    "category": "services"
+  },
+  {
+    "id": "rag-04",
+    "query": "ক্যাশ আউটে কত টাকা চার্জ কাটে?",
+    "language": "bn",
+    "expectedDocId": "kb-fee-schedule",
+    "category": "fees"
+  },
+  {
+    "id": "rag-05",
+    "query": "What is the fee schedule for cash out and send money?",
+    "language": "en",
+    "expectedDocId": "kb-fee-schedule",
+    "category": "fees"
+  },
+  {
+    "id": "rag-06",
+    "query": "upay service fee and charge koto",
+    "language": "banglish",
+    "expectedDocId": "kb-fee-schedule",
+    "category": "fees"
+  },
+  {
+    "id": "rag-07",
+    "query": "মাইক্রো-সেভিংস ও রাউন্ড-আপ সঞ্চয় কীভাবে কাজ করে?",
+    "language": "bn",
+    "expectedDocId": "kb-micro-savings",
+    "category": "savings"
+  },
+  {
+    "id": "rag-08",
+    "query": "How does percentage and round-up micro-savings work?",
+    "language": "en",
+    "expectedDocId": "kb-micro-savings",
+    "category": "savings"
+  },
+  {
+    "id": "rag-09",
+    "query": "roundup micro savings kivabe kaj kore",
+    "language": "banglish",
+    "expectedDocId": "kb-micro-savings",
+    "category": "savings"
+  },
+  {
+    "id": "rag-10",
+    "query": "গার্ডিয়ান মোড এবং সন্তানের অ্যাকাউন্টের লিমিট কী?",
+    "language": "bn",
+    "expectedDocId": "kb-guardian-mode",
+    "category": "guardian"
+  },
+  {
+    "id": "rag-11",
+    "query": "How do child limits and guardian approval tiers work?",
+    "language": "en",
+    "expectedDocId": "kb-guardian-mode",
+    "category": "guardian"
+  },
+  {
+    "id": "rag-12",
+    "query": "guardian approval mode and child account policy",
+    "language": "banglish",
+    "expectedDocId": "kb-guardian-mode",
+    "category": "guardian"
+  },
+  {
+    "id": "rag-13",
+    "query": "পিন এবং ওটিপি গোপনীয়তা রক্ষা করার নিয়ম কী?",
+    "language": "bn",
+    "expectedDocId": "kb-security-pin",
+    "category": "security"
+  },
+  {
+    "id": "rag-14",
+    "query": "Security guidelines for PIN and OTP privacy",
+    "language": "en",
+    "expectedDocId": "kb-security-pin",
+    "category": "security"
+  },
+  {
+    "id": "rag-15",
+    "query": "pin ebong password privacy guidelines",
+    "language": "banglish",
+    "expectedDocId": "kb-security-pin",
+    "category": "security"
+  },
+  {
+    "id": "rag-16",
+    "query": "গ্রুপ বিল এবং বন্ধুদের সাথে বিল ভাগ করার নিয়ম",
+    "language": "bn",
+    "expectedDocId": "kb-group-split",
+    "category": "group_bill"
+  },
+  {
+    "id": "rag-17",
+    "query": "How to split a restaurant or travel bill with friends?",
+    "language": "en",
+    "expectedDocId": "kb-group-split",
+    "category": "group_bill"
+  },
+  {
+    "id": "rag-18",
+    "query": "group bill kivabe share korbo",
+    "language": "banglish",
+    "expectedDocId": "kb-group-split",
+    "category": "group_bill"
+  },
+  {
+    "id": "rag-19",
+    "query": "শিডিউল পেমেন্ট এবং অটোমেশন রুল কীভাবে সেট করে?",
+    "language": "bn",
+    "expectedDocId": "kb-scheduler-rules",
+    "category": "automation"
+  },
+  {
+    "id": "rag-20",
+    "query": "How do recurring schedules and conditional rules work?",
+    "language": "en",
+    "expectedDocId": "kb-scheduler-rules",
+    "category": "automation"
+  },
+  {
+    "id": "rag-21",
+    "query": "scheduled payment ebong auto rule",
+    "language": "banglish",
+    "expectedDocId": "kb-scheduler-rules",
+    "category": "automation"
+  },
+  {
+    "id": "rag-22",
+    "query": "অ্যাকাউন্টের দৈনিক লেনদেন সীমা কত?",
+    "language": "bn",
+    "expectedDocId": "kb-account-tiers",
+    "category": "account"
+  },
+  {
+    "id": "rag-23",
+    "query": "What are the daily transaction limits and tier requirements?",
+    "language": "en",
+    "expectedDocId": "kb-account-tiers",
+    "category": "account"
+  },
+  {
+    "id": "rag-24",
+    "query": "account daily limit koto taka",
+    "language": "banglish",
+    "expectedDocId": "kb-account-tiers",
+    "category": "account"
+  }
+]

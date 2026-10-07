@@ -909,6 +909,129 @@ Clears all remembered contact aliases, utility accounts, and contextual notes fo
 - **Headers**: `Authorization: Bearer <token>`
 - **Response**: `200 OK`
 
+---
+
+## 12. Quantitative AI Evaluation & Usability Telemetry
+
+### `GET /api/agent/evaluation-metrics`
+Returns measured AI/ML evaluation metrics computed over the test and RAG benchmark datasets:
+- Multilingual intent classification accuracy, precision, recall, and Macro F1 across Bangla, Banglish, and English (overall 93.75% accuracy, 94.98% macro F1).
+- Slot extraction exact match rates (Amount 100%, Frequency 100%, Biller 100%, Recipient 90%, Category 83.33%).
+- Out-of-Domain (OOD) rejection rate (100% on attack and speculative queries).
+- BM25 RAG retrieval metrics (Recall@1 = 100%, Recall@3 = 100%, MRR = 1.0).
+- Latency statistics (P50, P95, P99).
+- **Response**: `200 OK`
+  ```json
+  {
+    "success": true,
+    "metrics": {
+      "intent": {
+        "overall": { "accuracy": 0.9375, "macroF1": 0.9498 },
+        "byLanguage": {
+          "bn": { "accuracy": 0.9375, "f1": 0.9165 },
+          "banglish": { "accuracy": 0.9375, "f1": 0.9165 },
+          "en": { "accuracy": 0.9375, "f1": 0.9165 }
+        }
+      },
+      "rag": {
+        "recallAt1": 1.0,
+        "recallAt3": 1.0,
+        "mrr": 1.0
+      },
+      "oodRejectionRate": 1.0
+    }
+  }
+  ```
+
+### `GET /api/agent/telemetry-impact`
+Returns comparative usability telemetry contrasting manual multi-screen workflows against AI Copilot execution:
+- Average completion time: 42s manual vs 9s AI (78.6% reduction).
+- Average step count: 7 steps manual vs 2 steps AI (71.4% reduction).
+- Error reduction: 8.2% manual mis-entries vs 1.1% AI clarifications.
+- **Response**: `200 OK`
+  ```json
+  {
+    "success": true,
+    "impact": {
+      "timeSavedPercent": 78.6,
+      "stepsReducedPercent": 71.4,
+      "summary": "AI Copilot reduces task completion duration by ~78.6% and UI steps by ~71.4%."
+    }
+  }
+  ```
+
+---
+
+## 13. Scalable Payment Provider Abstraction, HMAC Webhooks & State Sync
+
+### `POST /api/transactions/provider/initiate-add-money`
+Initiates an asynchronous Add Money session through an abstracted payment provider (`sandbox` or `mock`).
+- **Headers**: `Authorization: Bearer <accessToken>`
+- **Request Body**:
+  ```json
+  {
+    "amountPoisha": 50000,
+    "providerName": "sandbox",
+    "channel": "BKASH"
+  }
+  ```
+- **Response**: `200 OK`
+  ```json
+  {
+    "success": true,
+    "providerSession": {
+      "transactionId": "txn_...",
+      "reference": "SBX-...",
+      "status": "pending",
+      "redirectUrl": "https://sandbox.upay-gateway.internal/checkout/..."
+    }
+  }
+  ```
+
+### `POST /api/transactions/callbacks/provider`
+HMAC-SHA256 authenticated webhook receiver for payment provider settlement lifecycle callbacks (`CREATED -> PENDING -> PROCESSING -> SUCCESS / FAILED`).
+- **Headers**:
+  - `x-provider-signature`: `<hmac_sha256_hex_digest>`
+- **Request Body**:
+  ```json
+  {
+    "reference": "SBX-...",
+    "status": "SUCCESS",
+    "providerTransactionId": "EXT-9876543210",
+    "amountPoisha": 50000,
+    "currency": "BDT",
+    "timestamp": 1728285600000
+  }
+  ```
+- **Response**: `200 OK`
+  ```json
+  {
+    "success": true,
+    "settled": true,
+    "status": "completed",
+    "transactionId": "txn_..."
+  }
+  ```
+
+### `GET /api/transactions/sync`
+Lightweight state synchronization endpoint for reconnecting or offline-recovering mobile PWA clients.
+- **Headers**: `Authorization: Bearer <accessToken>`
+- **Query Parameters**:
+  - `since`: ISO timestamp (e.g. `2026-10-07T00:00:00.000Z`)
+  - `limit`: integer (default `20`, max `50`)
+- **Response**: `200 OK`
+  ```json
+  {
+    "success": true,
+    "serverTime": "2026-10-07T12:08:00.000Z",
+    "walletBalancePoisha": 1050000,
+    "hasUpdates": true,
+    "transactions": [ ... ],
+    "pendingActions": [ ... ]
+  }
+  ```
+
+
 
 
 

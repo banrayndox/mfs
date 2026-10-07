@@ -31,7 +31,28 @@ async function startServer() {
   try {
     logger.info("🚀 Booting Guardian MFS Server...");
 
+    // Production Security Hardening: Enforce strong secrets in production environment
+    if (process.env.NODE_ENV === 'production') {
+      const weakSecrets = [
+        'super-secret-jwt-key-change-me',
+        'super-secret-refresh-key-change-me',
+        'dev-access-secret-fallback-key-32chars',
+        'dev-refresh-secret-fallback-key-32chars',
+        'test-secret',
+        'dev-secret',
+      ];
+      const accessSecret = process.env.JWT_ACCESS_SECRET || '';
+      const refreshSecret = process.env.JWT_REFRESH_SECRET || '';
+      if (!accessSecret || accessSecret.length < 32 || weakSecrets.includes(accessSecret)) {
+        throw new Error('FATAL SECURITY ERROR: In production mode, JWT_ACCESS_SECRET must be at least 32 characters and cannot use default/weak keys.');
+      }
+      if (!refreshSecret || refreshSecret.length < 32 || weakSecrets.includes(refreshSecret)) {
+        throw new Error('FATAL SECURITY ERROR: In production mode, JWT_REFRESH_SECRET must be at least 32 characters and cannot use default/weak keys.');
+      }
+    }
+
     // Run Doctor diagnostics at boot
+
     const doctorReport = await runDoctor({ isServerBoot: true });
     if (doctorReport.groq.mockMode) {
       logger.warn(

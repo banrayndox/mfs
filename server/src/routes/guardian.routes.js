@@ -14,6 +14,21 @@ import { GuardianLink, ProtectedProfile } from '../models/index.js';
 
 export const guardianRouter = express.Router();
 
+/**
+ * Authorization guard: CHILD accounts cannot act as guardians or alter parental controls.
+ */
+function requireGuardianRole(req, res, next) {
+  if (req.user?.accountType === 'CHILD') {
+    return res.status(403).json({
+      success: false,
+      code: 'CHILD_ACCOUNT_RESTRICTED',
+      message: 'সন্তান অ্যাকাউন্ট থেকে অভিভাবক নিয়ন্ত্রণের এই কাজটি করা সম্ভব নয় (Child accounts cannot perform guardian management actions).',
+    });
+  }
+  next();
+}
+
+
 // Get Guardian / Ward Status
 guardianRouter.get('/status', requireAuth, async (req, res, next) => {
   try {
@@ -63,7 +78,7 @@ guardianRouter.get('/approvals/:txnId', requireAuth, async (req, res, next) => {
 });
 
 // Guardian approves or rejects pending transaction (Requires T2 PIN step-up)
-guardianRouter.post('/approvals/:txnId/decide', requireAuth, requireTier('T2'), async (req, res, next) => {
+guardianRouter.post('/approvals/:txnId/decide', requireAuth, requireGuardianRole, requireTier('T2'), async (req, res, next) => {
   try {
     const { decision, reason } = req.body;
     const result = await decideGuardianApproval({
@@ -82,7 +97,7 @@ guardianRouter.post('/approvals/:txnId/decide', requireAuth, requireTier('T2'), 
 });
 
 // Link Guardian (Requires T3)
-guardianRouter.post('/link', requireAuth, requireTier('T3'), async (req, res, next) => {
+guardianRouter.post('/link', requireAuth, requireGuardianRole, requireTier('T3'), async (req, res, next) => {
   try {
     const { guardianPhone, relationship, warnMode } = req.body;
     const link = await linkGuardian({
@@ -98,7 +113,7 @@ guardianRouter.post('/link', requireAuth, requireTier('T3'), async (req, res, ne
 });
 
 // Create Child Profile under Guardian
-guardianRouter.post('/child', requireAuth, async (req, res, next) => {
+guardianRouter.post('/child', requireAuth, requireGuardianRole, async (req, res, next) => {
   try {
     const { name, phone, dob, birthCertificateNumber, pin, dailyLimitPoisha } = req.body;
     if (!pin || !/^\d{4}$/.test(String(pin))) {
@@ -123,7 +138,7 @@ guardianRouter.post('/child', requireAuth, async (req, res, next) => {
 });
 
 // Update Child Control Mode (APPROVAL_REQUIRED, LIMITED, UPDATES_ONLY)
-guardianRouter.put('/children/:childId/mode', requireAuth, async (req, res, next) => {
+guardianRouter.put('/children/:childId/mode', requireAuth, requireGuardianRole, async (req, res, next) => {
   try {
     const { controlMode, dailyLimitPoisha } = req.body;
     const profile = await updateChildControlMode({
@@ -139,7 +154,8 @@ guardianRouter.put('/children/:childId/mode', requireAuth, async (req, res, next
 });
 
 // Remove Child Relationship (Deactivates relationship, preserves child user account)
-guardianRouter.post('/children/:childId/remove', requireAuth, async (req, res, next) => {
+guardianRouter.post('/children/:childId/remove', requireAuth, requireGuardianRole, async (req, res, next) => {
+
   try {
     const profile = await removeChildRelationship({
       guardianUserId: req.user._id,

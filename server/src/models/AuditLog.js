@@ -37,6 +37,8 @@ const AuditLogSchema = new mongoose.Schema(
 );
 
 AuditLogSchema.index({ createdAt: -1 });
+AuditLogSchema.index({ userId: 1, createdAt: -1 });
 
 export const AuditLog = mongoose.model('AuditLog', AuditLogSchema);
 export default AuditLog;
+

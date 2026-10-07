@@ -21,50 +21,103 @@ try {
 
 /**
  * Tokenize string into lowercase alphanumeric and unicode words.
- * Handles Bangla and English script.
+ * Handles Bangla and English script and n-grams.
+ * @param {string} text
+ * @returns {string[]}
  */
 function tokenize(text) {
   if (!text) return [];
-  return text
+  const words = text
     .toLowerCase()
     .replace(/[^\p{L}\p{N}\s]/gu, ' ')
     .split(/\s+/)
     .filter((w) => w.length > 1);
-}
 
-/**
- * Compute Term Frequency map for a token list.
- */
-function computeTf(tokens) {
-  const tf = {};
-  for (const token of tokens) {
-    tf[token] = (tf[token] || 0) + 1;
+  // Generate bigrams for stronger phrasal match in Bangla/English
+  const bigrams = [];
+  for (let i = 0; i < words.length - 1; i++) {
+    bigrams.push(`${words[i]}_${words[i + 1]}`);
   }
-  return tf;
+
+  return [...words, ...bigrams];
 }
 
 /**
- * Calculate cosine similarity between query TF and document TF.
+ * Compute BM25 scores for corpus.
  */
-function calculateSimilarity(queryTf, docTf) {
-  let dotProduct = 0;
-  let queryNorm = 0;
-  let docNorm = 0;
+class BM25Retriever {
+  constructor(docs = []) {
+    this.docs = docs;
+    this.docCount = docs.length;
+    this.avgDocLen = 0;
+    this.docLengths = [];
+    this.docTermFreqs = [];
+    this.docFreqs = {};
+    this.k1 = 1.5;
+    this.b = 0.75;
 
-  for (const [term, qCount] of Object.entries(queryTf)) {
-    queryNorm += qCount * qCount;
-    if (docTf[term]) {
-      dotProduct += qCount * docTf[term];
+    this._index();
+  }
+
+  _index() {
+    if (this.docCount === 0) return;
+    let totalLen = 0;
+
+    this.docs.forEach((doc, idx) => {
+      const text = [
+        ...(doc.keywords || []),
+        doc.titleBn,
+        doc.titleEn,
+        doc.contentBn,
+        doc.contentEn,
+      ].join(' ');
+
+      const tokens = tokenize(text);
+      this.docLengths[idx] = tokens.length;
+      totalLen += tokens.length;
+
+      const tf = {};
+      const uniqueTokens = new Set(tokens);
+      for (const t of tokens) {
+        tf[t] = (tf[t] || 0) + 1;
+      }
+      this.docTermFreqs[idx] = tf;
+
+      for (const t of uniqueTokens) {
+        this.docFreqs[t] = (this.docFreqs[t] || 0) + 1;
+      }
+    });
+
+    this.avgDocLen = totalLen / Math.max(1, this.docCount);
+  }
+
+  scoreQuery(query, docIdx) {
+    const qTokens = tokenize(query);
+    if (qTokens.length === 0) return 0;
+
+    let score = 0;
+    const docLen = this.docLengths[docIdx] || 1;
+    const tfMap = this.docTermFreqs[docIdx] || {};
+
+    for (const term of qTokens) {
+      if (!this.docFreqs[term]) continue;
+
+      const df = this.docFreqs[term];
+      // Robertson-Sparck Jones IDF
+      const idf = Math.log(1 + (this.docCount - df + 0.5) / (df + 0.5));
+      const tf = tfMap[term] || 0;
+
+      const numerator = tf * (this.k1 + 1);
+      const denominator = tf + this.k1 * (1 - this.b + this.b * (docLen / this.avgDocLen));
+
+      score += idf * (numerator / denominator);
     }
-  }
 
-  for (const dCount of Object.values(docTf)) {
-    docNorm += dCount * dCount;
+    return score;
   }
-
-  if (queryNorm === 0 || docNorm === 0) return 0;
-  return dotProduct / (Math.sqrt(queryNorm) * Math.sqrt(docNorm));
 }
+
+let bm25 = new BM25Retriever(documents);
 
 /**
  * Retrieve the most relevant official documentation snippet for a natural language query.
@@ -72,43 +125,58 @@ function calculateSimilarity(queryTf, docTf) {
  * NEVER used for live user balances or transaction records.
  *
  * @param {string} query
- * @param {{ language?: 'bn' | 'en', topK?: number, minScore?: number }} options
- * @returns {Array<{ id: string, title: string, content: string, score: number }>}
+ * @param {{ language?: 'bn' | 'en', topK?: number, minScore?: number, category?: string }} options
+ * @returns {Array<{ id: string, category: string, title: string, content: string, score: number }>}
  */
-export function retrieveKnowledge(query, { language = 'bn', topK = 1, minScore = 0.12 } = {}) {
-  if (!query || documents.length === 0) return [];
+export function retrieveKnowledge(queryArg, optionsArg = {}) {
+  let query = queryArg;
+  let options = optionsArg;
 
-  const queryTokens = tokenize(query);
-  if (queryTokens.length === 0) return [];
-  const queryTf = computeTf(queryTokens);
+  if (typeof queryArg === 'object' && queryArg !== null && queryArg.query) {
+    query = queryArg.query;
+    options = queryArg;
+  }
 
-  const scoredDocs = documents.map((doc) => {
-    // Combine keywords, title, and content for document vector
-    const docText = [
-      ...(doc.keywords || []),
-      doc.titleBn,
-      doc.titleEn,
-      doc.contentBn,
-      doc.contentEn,
-    ].join(' ');
+  const { language = 'bn', topK = 1, minScore = 0.15, category = null } = options;
+  if (!query || typeof query !== 'string' || documents.length === 0) return [];
 
-    const docTokens = tokenize(docText);
-    const docTf = computeTf(docTokens);
 
-    let similarity = calculateSimilarity(queryTf, docTf);
+  // Filter docs if category is provided
+  let candidateDocs = documents;
+  if (category) {
+    candidateDocs = documents.filter((d) => d.category.toLowerCase() === category.toLowerCase());
+  }
+  if (candidateDocs.length === 0) return [];
 
-    // Boost if any exact keyword is found
-    const hasKeyword = (doc.keywords || []).some((kw) => query.toLowerCase().includes(kw.toLowerCase()));
+  const lowerQuery = query.toLowerCase();
+
+
+  const scoredDocs = candidateDocs.map((doc) => {
+    const originalIdx = documents.indexOf(doc);
+    let score = bm25.scoreQuery(query, originalIdx);
+
+    // Boost for exact keyword or title overlap
+    const hasKeyword = (doc.keywords || []).some((kw) => lowerQuery.includes(kw.toLowerCase()));
     if (hasKeyword) {
-      similarity += 0.25;
+      score += 2.0;
     }
+
+    const titleEn = (doc.titleEn || '').toLowerCase();
+    const titleBn = (doc.titleBn || '').toLowerCase();
+    if (lowerQuery.includes(titleEn) || lowerQuery.includes(titleBn)) {
+      score += 3.0;
+    }
+
+    // Normalized score between 0 and 1
+    const normalizedScore = Math.min(1.0, score / 10.0);
 
     return {
       id: doc.id,
       category: doc.category,
       title: language === 'bn' ? doc.titleBn : doc.titleEn,
       content: language === 'bn' ? doc.contentBn : doc.contentEn,
-      score: similarity,
+      score: Number(normalizedScore.toFixed(4)),
+      rawScore: score,
     };
   });
 
@@ -118,6 +186,53 @@ export function retrieveKnowledge(query, { language = 'bn', topK = 1, minScore =
     .slice(0, topK);
 }
 
+/**
+ * Evaluates RAG retrieval performance against a labelled dataset.
+ * Computes Recall@1, Recall@3, Recall@5, and MRR (Mean Reciprocal Rank).
+ *
+ * @param {Array<{ query: string, expectedDocId: string, category?: string }>} evalDataset
+ * @returns {{ recallAt1: number, recallAt3: number, recallAt5: number, mrr: number, totalQueries: number }}
+ */
+export function evaluateRag(evalDataset) {
+  if (!evalDataset || evalDataset.length === 0) {
+    return { recallAt1: 0, recallAt3: 0, recallAt5: 0, mrr: 0, totalQueries: 0 };
+  }
+
+  let hitsAt1 = 0;
+  let hitsAt3 = 0;
+  let hitsAt5 = 0;
+  let totalReciprocalRank = 0;
+
+  for (const item of evalDataset) {
+    const results = retrieveKnowledge(item.query, { topK: 5, minScore: 0.05, category: item.category });
+    const rankIndex = results.findIndex((r) => r.id === item.expectedDocId);
+
+    if (rankIndex === 0) {
+      hitsAt1 += 1;
+    }
+    if (rankIndex >= 0 && rankIndex < 3) {
+      hitsAt3 += 1;
+    }
+    if (rankIndex >= 0 && rankIndex < 5) {
+      hitsAt5 += 1;
+    }
+
+    if (rankIndex >= 0) {
+      totalReciprocalRank += 1 / (rankIndex + 1);
+    }
+  }
+
+  const N = evalDataset.length;
+  return {
+    recallAt1: Number(((hitsAt1 / N) * 100).toFixed(2)),
+    recallAt3: Number(((hitsAt3 / N) * 100).toFixed(2)),
+    recallAt5: Number(((hitsAt5 / N) * 100).toFixed(2)),
+    mrr: Number((totalReciprocalRank / N).toFixed(4)),
+    totalQueries: N,
+  };
+}
+
 export default {
   retrieveKnowledge,
+  evaluateRag,
 };
